@@ -180,10 +180,11 @@ export async function getTempoItemsBySessionId(sessionId: string): Promise<Tempo
   return (data || []) as TempoItem[];
 }
 
-export async function updateTempoDone(itemId: string, done: boolean): Promise<boolean> {
+export async function updateTempoDone(itemId: string, done: boolean, editToken: string): Promise<boolean> {
   const { data, error } = await supabase.rpc('update_tempo_done', {
     p_item_id: itemId,
     p_done: done,
+    p_edit_token: editToken,
   });
 
   if (error) throw error;
