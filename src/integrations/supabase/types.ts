@@ -260,7 +260,7 @@ export type Database = {
         }[]
       }
       update_tempo_done: {
-        Args: { p_done: boolean; p_item_id: string }
+        Args: { p_done: boolean; p_edit_token: string; p_item_id: string }
         Returns: boolean
       }
       update_tempo_item_with_token: {

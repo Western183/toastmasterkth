@@ -117,15 +117,20 @@ export default function SessionView() {
     return tempoItems.filter((item) => item.done).length;
   }, [tempoItems]);
 
-  // Handle toggle done - optimistic update
+  // Handle toggle done - optimistic update (requires edit token)
   const handleToggleDone = useCallback(async (itemId: string, done: boolean) => {
+    if (!editToken) {
+      toast.error('Du har inte behörighet att ändra status');
+      return;
+    }
+
     // Optimistic update
     setLocalTempoItems((prev) =>
       prev.map((item) => (item.id === itemId ? { ...item, done } : item))
     );
 
     try {
-      await updateTempoDone(itemId, done);
+      await updateTempoDone(itemId, done, editToken);
     } catch {
       // Revert on error
       setLocalTempoItems((prev) =>
@@ -133,7 +138,7 @@ export default function SessionView() {
       );
       toast.error('Kunde inte uppdatera status');
     }
-  }, []);
+  }, [editToken]);
 
   // Handle inline update - optimistic update with debounced save
   const handleInlineUpdate = useCallback(async (itemId: string, updates: Partial<TempoItem>) => {
