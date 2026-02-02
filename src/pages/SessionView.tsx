@@ -41,7 +41,6 @@ import {
   updateTempoItemWithToken,
   deleteTempoItemWithToken,
   updateTempoOrderWithToken,
-  getSessionEditToken,
 } from '@/lib/secure-api';
 import { TempoItem } from '@/types/session';
 import { toast } from 'sonner';
@@ -81,24 +80,15 @@ export default function SessionView() {
   // User can edit if they have unlocked the session with PIN (or are the creator)
   const canEdit = session ? isSessionUnlocked(session.id) : false;
 
-  // Fetch edit token if session is unlocked but we don't have the token
+  // Load edit token from localStorage if session is unlocked
+  // Token is stored during PIN verification (MySessionsList.tsx)
   useEffect(() => {
-    async function fetchEditToken() {
-      if (session && canEdit && !editToken) {
-        const storedToken = getEditToken(session.id);
-        if (storedToken) {
-          setEditToken(storedToken);
-        } else {
-          // Fetch from server and save
-          const token = await getSessionEditToken(session.id);
-          if (token) {
-            saveEditToken(session.id, token);
-            setEditToken(token);
-          }
-        }
+    if (session && canEdit && !editToken) {
+      const storedToken = getEditToken(session.id);
+      if (storedToken) {
+        setEditToken(storedToken);
       }
     }
-    fetchEditToken();
   }, [session, canEdit, editToken]);
 
   const sensors = useSensors(

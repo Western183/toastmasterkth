@@ -212,10 +212,6 @@ export type Database = {
           share_code: string
         }[]
       }
-      get_session_edit_token: {
-        Args: { p_session_id: string }
-        Returns: string
-      }
       get_tempo_items_for_session: {
         Args: { p_session_id: string }
         Returns: {
