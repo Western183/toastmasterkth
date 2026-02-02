@@ -18,9 +18,11 @@ export async function createSession(name: string, people: { name: string; color:
 
   if (error) throw error;
 
+  let firstPersonId: string | null = null;
+
   // Insert people
   if (people.length > 0) {
-    const { error: peopleError } = await supabase
+    const { data: insertedPeople, error: peopleError } = await supabase
       .from('people')
       .insert(
         people.map((p) => ({
@@ -28,10 +30,34 @@ export async function createSession(name: string, people: { name: string; color:
           name: p.name,
           color: p.color,
         }))
-      );
+      )
+      .select();
 
     if (peopleError) throw peopleError;
+    
+    // Get the first person's ID for default tempo assignment
+    if (insertedPeople && insertedPeople.length > 0) {
+      firstPersonId = insertedPeople[0].id;
+    }
   }
+
+  // Create default tempo items
+  const defaultTempos = [
+    { order_index: 0, title: 'Porthos visa', page: 's. 52', note: 'Välkomna', person_id: firstPersonId },
+    { order_index: 1, title: 'Theodor', page: 's. 76', note: 'Presentera förätt + spec', person_id: firstPersonId },
+    { order_index: 2, title: 'En liten blå förgätmigej', page: 's. 90', note: 'Tacka personalen', person_id: firstPersonId },
+  ];
+
+  const { error: tempoError } = await supabase
+    .from('tempo_items')
+    .insert(
+      defaultTempos.map((t) => ({
+        session_id: session.id,
+        ...t,
+      }))
+    );
+
+  if (tempoError) throw tempoError;
 
   // Save edit token locally (this also adds to my sessions)
   saveEditToken(session.id, editToken);
