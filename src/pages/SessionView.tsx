@@ -196,27 +196,25 @@ export default function SessionView() {
 
           <ShareDialog shareCode={session.share_code} sessionId={session.id} />
 
-          {canEdit && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant={isEditMode ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setIsEditMode(!isEditMode)}
-              >
-                {isEditMode ? (
-                  <>
-                    <Eye className="mr-1 h-4 w-4" />
-                    Visa
-                  </>
-                ) : (
-                  <>
-                    <Pencil className="mr-1 h-4 w-4" />
-                    Redigera
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <Button
+              variant={isEditMode ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setIsEditMode(!isEditMode)}
+            >
+              {isEditMode ? (
+                <>
+                  <Eye className="mr-1 h-4 w-4" />
+                  Visa
+                </>
+              ) : (
+                <>
+                  <Pencil className="mr-1 h-4 w-4" />
+                  Redigera
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
