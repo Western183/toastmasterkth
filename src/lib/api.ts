@@ -90,6 +90,32 @@ export async function getAllSessions(): Promise<Session[]> {
   return data as Session[];
 }
 
+export async function deleteSession(sessionId: string): Promise<void> {
+  // Delete tempo items first (foreign key constraint)
+  const { error: tempoError } = await supabase
+    .from('tempo_items')
+    .delete()
+    .eq('session_id', sessionId);
+
+  if (tempoError) throw tempoError;
+
+  // Delete people
+  const { error: peopleError } = await supabase
+    .from('people')
+    .delete()
+    .eq('session_id', sessionId);
+
+  if (peopleError) throw peopleError;
+
+  // Delete session
+  const { error } = await supabase
+    .from('sessions')
+    .delete()
+    .eq('id', sessionId);
+
+  if (error) throw error;
+}
+
 export async function getSessionByCode(code: string): Promise<Session | null> {
   const { data, error } = await supabase
     .from('sessions')
