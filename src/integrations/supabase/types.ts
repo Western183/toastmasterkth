@@ -147,6 +147,15 @@ export type Database = {
         }
         Returns: string
       }
+      create_session_with_token: {
+        Args: {
+          p_edit_token: string
+          p_name: string
+          p_pin_code: string
+          p_share_code: string
+        }
+        Returns: string
+      }
       create_tempo_item_with_token: {
         Args: {
           p_edit_token: string
