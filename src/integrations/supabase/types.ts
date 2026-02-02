@@ -182,6 +182,16 @@ export type Database = {
           share_code: string
         }[]
       }
+      get_people_for_session: {
+        Args: { p_session_id: string }
+        Returns: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          session_id: string
+        }[]
+      }
       get_session_by_share_code: {
         Args: { p_share_code: string }
         Returns: {
@@ -190,6 +200,23 @@ export type Database = {
           id: string
           name: string
           share_code: string
+        }[]
+      }
+      get_tempo_items_for_session: {
+        Args: { p_session_id: string }
+        Returns: {
+          created_at: string
+          done: boolean
+          id: string
+          live_count: number
+          note: string
+          order_index: number
+          page: string
+          person_id: string
+          session_id: string
+          title: string
+          updated_at: string
+          video_count: number
         }[]
       }
       update_tempo_done: {

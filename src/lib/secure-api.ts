@@ -159,16 +159,14 @@ export async function deleteSessionWithToken(sessionId: string, editToken: strin
 // =====================================================
 
 export async function getTempoItemsBySessionId(sessionId: string): Promise<TempoItem[]> {
-  // READ is still allowed via RLS
-  const { data, error } = await supabase
-    .from('tempo_items')
-    .select('*')
-    .eq('session_id', sessionId)
-    .order('order_index', { ascending: true });
+  // Use secure RPC function to read tempo items
+  const { data, error } = await supabase.rpc('get_tempo_items_for_session', {
+    p_session_id: sessionId,
+  });
 
   if (error) throw error;
 
-  return data as TempoItem[];
+  return (data || []) as TempoItem[];
 }
 
 export async function updateTempoDone(itemId: string, done: boolean): Promise<boolean> {
@@ -259,16 +257,14 @@ export async function updateTempoOrderWithToken(
 // =====================================================
 
 export async function getPeopleBySessionId(sessionId: string): Promise<Person[]> {
-  // READ is still allowed via RLS
-  const { data, error } = await supabase
-    .from('people')
-    .select('*')
-    .eq('session_id', sessionId)
-    .order('created_at', { ascending: true });
+  // Use secure RPC function to read people
+  const { data, error } = await supabase.rpc('get_people_for_session', {
+    p_session_id: sessionId,
+  });
 
   if (error) throw error;
 
-  return data as Person[];
+  return (data || []) as Person[];
 }
 
 export async function addPersonWithToken(
