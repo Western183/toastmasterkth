@@ -30,6 +30,7 @@ import { Switch } from '@/components/ui/switch';
 import { TempoCard } from '@/components/TempoCard';
 import { EditTempoModal } from '@/components/EditTempoModal';
 import { ShareDialog } from '@/components/ShareDialog';
+import { DeleteSessionDialog } from '@/components/DeleteSessionDialog';
 import { useSession } from '@/hooks/useSession';
 import { hasEditAccess } from '@/lib/session-utils';
 import {
@@ -284,21 +285,28 @@ export default function SessionView() {
           </DndContext>
         )}
 
-        {/* Add button in edit mode */}
-        {isEditMode && tempoItems.length > 0 && (
+        {/* Add button and delete option in edit mode */}
+        {isEditMode && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="mt-4"
+            className="mt-6 space-y-4"
           >
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => setIsAddingNew(true)}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Lägg till tempo
-            </Button>
+            {tempoItems.length > 0 && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setIsAddingNew(true)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Lägg till tempo
+              </Button>
+            )}
+
+            <div className="border-t pt-6">
+              <p className="mb-3 text-sm text-muted-foreground">Farozon</p>
+              <DeleteSessionDialog sessionId={session.id} sessionName={session.name} />
+            </div>
           </motion.div>
         )}
       </main>
