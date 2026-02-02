@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getSessionByCode } from '@/lib/api';
+import { addToMySessions } from '@/lib/session-utils';
 import { toast } from 'sonner';
 
 export const JoinSessionForm = forwardRef<HTMLFormElement>(
@@ -25,6 +26,7 @@ export const JoinSessionForm = forwardRef<HTMLFormElement>(
       try {
         const session = await getSessionByCode(code.trim());
         if (session) {
+          addToMySessions(session.id);
           navigate(`/session/${session.id}`);
         } else {
           toast.error('Ingen sittning hittades med den koden');

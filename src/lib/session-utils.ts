@@ -18,6 +18,7 @@ export function generateEditToken(): string {
 
 // Local storage keys
 const EDIT_TOKENS_KEY = 'sittning_edit_tokens';
+const MY_SESSIONS_KEY = 'sittning_my_sessions';
 
 interface EditTokenStore {
   [sessionId: string]: string;
@@ -28,6 +29,9 @@ export function saveEditToken(sessionId: string, token: string): void {
   const tokens: EditTokenStore = stored ? JSON.parse(stored) : {};
   tokens[sessionId] = token;
   localStorage.setItem(EDIT_TOKENS_KEY, JSON.stringify(tokens));
+  
+  // Also save to my sessions list
+  addToMySessions(sessionId);
 }
 
 export function getEditToken(sessionId: string): string | null {
@@ -40,4 +44,23 @@ export function getEditToken(sessionId: string): string | null {
 export function hasEditAccess(sessionId: string, actualToken: string): boolean {
   const storedToken = getEditToken(sessionId);
   return storedToken === actualToken;
+}
+
+// Track all sessions the user has access to (created or joined)
+export function addToMySessions(sessionId: string): void {
+  const sessions = getMySessions();
+  if (!sessions.includes(sessionId)) {
+    sessions.push(sessionId);
+    localStorage.setItem(MY_SESSIONS_KEY, JSON.stringify(sessions));
+  }
+}
+
+export function getMySessions(): string[] {
+  const stored = localStorage.getItem(MY_SESSIONS_KEY);
+  return stored ? JSON.parse(stored) : [];
+}
+
+export function removeFromMySessions(sessionId: string): void {
+  const sessions = getMySessions().filter(id => id !== sessionId);
+  localStorage.setItem(MY_SESSIONS_KEY, JSON.stringify(sessions));
 }
