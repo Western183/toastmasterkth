@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronRight, Calendar, Lock, LockOpen } from 'lucide-react';
-import { Session } from '@/types/session';
-import { getAllSessions } from '@/lib/api';
+import { getAllSessionsPublic, verifySessionPin, PublicSession } from '@/lib/secure-api';
 import { getEditToken, isSessionUnlocked, unlockSession } from '@/lib/session-utils';
 import { format } from 'date-fns';
 import { sv } from 'date-fns/locale';
@@ -11,15 +10,16 @@ import { PinDialog } from '@/components/PinDialog';
 
 export function MySessionsList() {
   const navigate = useNavigate();
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessions, setSessions] = useState<PublicSession[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pinDialogSession, setPinDialogSession] = useState<Session | null>(null);
+  const [pinDialogSession, setPinDialogSession] = useState<PublicSession | null>(null);
   const [pinError, setPinError] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     async function loadSessions() {
       try {
-        const data = await getAllSessions();
+        const data = await getAllSessionsPublic();
         setSessions(data);
       } catch (error) {
         console.error('Error loading sessions:', error);
@@ -31,9 +31,9 @@ export function MySessionsList() {
     loadSessions();
   }, []);
 
-  const handleSessionClick = (session: Session) => {
+  const handleSessionClick = (session: PublicSession) => {
     // If session has no PIN or is already unlocked, go directly
-    if (!session.pin_code || isSessionUnlocked(session.id)) {
+    if (!session.has_pin || isSessionUnlocked(session.id)) {
       navigate(`/session/${session.id}`);
       return;
     }
@@ -43,17 +43,28 @@ export function MySessionsList() {
     setPinError(false);
   };
 
-  const handlePinSubmit = (pin: string) => {
-    if (!pinDialogSession) return;
+  const handlePinSubmit = async (pin: string) => {
+    if (!pinDialogSession || verifying) return;
 
-    if (pin === pinDialogSession.pin_code) {
-      // Correct PIN - unlock and navigate
-      unlockSession(pinDialogSession.id);
-      navigate(`/session/${pinDialogSession.id}`);
-      setPinDialogSession(null);
-    } else {
-      // Wrong PIN
+    setVerifying(true);
+    try {
+      // Verify PIN server-side
+      const result = await verifySessionPin(pinDialogSession.id, pin);
+
+      if (result.valid) {
+        // Correct PIN - unlock and navigate
+        unlockSession(pinDialogSession.id);
+        navigate(`/session/${pinDialogSession.id}`);
+        setPinDialogSession(null);
+      } else {
+        // Wrong PIN
+        setPinError(true);
+      }
+    } catch (error) {
+      console.error('Error verifying PIN:', error);
       setPinError(true);
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -81,8 +92,8 @@ export function MySessionsList() {
         <div className="space-y-2">
           {sessions.map((session) => {
             const isCreator = !!getEditToken(session.id);
-            const isUnlocked = !session.pin_code || isSessionUnlocked(session.id);
-            
+            const isUnlocked = !session.has_pin || isSessionUnlocked(session.id);
+
             return (
               <motion.button
                 key={session.id}

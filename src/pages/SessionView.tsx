@@ -28,20 +28,19 @@ import {
 } from '@dnd-kit/sortable';
 
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import { TempoCard } from '@/components/TempoCard';
 import { EditTempoModal } from '@/components/EditTempoModal';
 import { ShareDialog } from '@/components/ShareDialog';
 import { DeleteSessionDialog } from '@/components/DeleteSessionDialog';
 import { useSession } from '@/hooks/useSession';
-import { hasEditAccess } from '@/lib/session-utils';
+import { getEditToken } from '@/lib/session-utils';
 import {
-  updateTempoItemDone,
-  createTempoItem,
-  updateTempoItem,
-  deleteTempoItem,
-  updateTempoItemsOrder,
-} from '@/lib/api';
+  updateTempoDone,
+  createTempoItemWithToken,
+  updateTempoItemWithToken,
+  deleteTempoItemWithToken,
+  updateTempoOrderWithToken,
+} from '@/lib/secure-api';
 import { TempoItem } from '@/types/session';
 import { toast } from 'sonner';
 
@@ -49,18 +48,21 @@ export default function SessionView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { session, people, tempoItems, loading, error } = useSession(id);
-  
+
   const [isEditMode, setIsEditMode] = useState(false);
   const [showOnlyUndone, setShowOnlyUndone] = useState(false);
   const [editingItem, setEditingItem] = useState<TempoItem | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
-  
+
   const listRef = useRef<HTMLDivElement>(null);
 
   const activeItem = activeId ? tempoItems.find((item) => item.id === activeId) : null;
 
-  const canEdit = session ? hasEditAccess(session.id, session.edit_token) : false;
+  // Get edit token from localStorage - this is just for UI display
+  // The actual authorization happens server-side
+  const editToken = session ? getEditToken(session.id) : null;
+  const canEdit = !!editToken;
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -90,19 +92,28 @@ export default function SessionView() {
 
   const handleToggleDone = async (itemId: string, done: boolean) => {
     try {
-      await updateTempoItemDone(itemId, done);
+      await updateTempoDone(itemId, done);
     } catch {
       toast.error('Kunde inte uppdatera status');
     }
   };
 
   const handleSaveItem = async (data: Partial<TempoItem>) => {
+    if (!editToken || !id) {
+      toast.error('Du har inte behörighet att redigera');
+      return;
+    }
+
     try {
       if (editingItem) {
-        await updateTempoItem(editingItem.id, data);
+        const success = await updateTempoItemWithToken(editingItem.id, editToken, data);
+        if (!success) {
+          toast.error('Kunde inte uppdatera - ogiltig token');
+          return;
+        }
         toast.success('Tempo uppdaterat');
       } else {
-        await createTempoItem(id!, {
+        const newId = await createTempoItemWithToken(id, editToken, {
           title: data.title!,
           page: data.page ?? null,
           note: data.note ?? null,
@@ -112,6 +123,10 @@ export default function SessionView() {
           order_index: data.order_index!,
           done: false,
         });
+        if (!newId) {
+          toast.error('Kunde inte skapa - ogiltig token');
+          return;
+        }
         toast.success('Tempo tillagt');
       }
       setEditingItem(null);
@@ -122,22 +137,31 @@ export default function SessionView() {
   };
 
   const handleDeleteItem = async (itemId: string) => {
+    if (!editToken || !id) {
+      toast.error('Du har inte behörighet att ta bort');
+      return;
+    }
+
     try {
-      await deleteTempoItem(itemId);
-      
+      const success = await deleteTempoItemWithToken(itemId, editToken);
+      if (!success) {
+        toast.error('Kunde inte ta bort - ogiltig token');
+        return;
+      }
+
       // Reindex remaining items after deletion
       const remainingItems = tempoItems
         .filter((item) => item.id !== itemId)
         .sort((a, b) => a.order_index - b.order_index);
-      
+
       if (remainingItems.length > 0) {
         const reindexUpdates = remainingItems.map((item, index) => ({
           id: item.id,
           order_index: index + 1,
         }));
-        await updateTempoItemsOrder(reindexUpdates);
+        await updateTempoOrderWithToken(id, editToken, reindexUpdates);
       }
-      
+
       toast.success('Tempo borttaget');
     } catch {
       toast.error('Kunde inte ta bort');
@@ -151,8 +175,9 @@ export default function SessionView() {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
-    
+
     if (!over || active.id === over.id) return;
+    if (!editToken || !id) return;
 
     const oldIndex = tempoItems.findIndex((item) => item.id === active.id);
     const newIndex = tempoItems.findIndex((item) => item.id === over.id);
@@ -169,7 +194,7 @@ export default function SessionView() {
     }));
 
     try {
-      await updateTempoItemsOrder(updates);
+      await updateTempoOrderWithToken(id, editToken, updates);
     } catch {
       toast.error('Kunde inte ändra ordning');
     }
@@ -222,25 +247,27 @@ export default function SessionView() {
 
           <ShareDialog shareCode={session.share_code} sessionId={session.id} />
 
-          <div className="flex items-center gap-2">
-            <Button
-              variant={isEditMode ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setIsEditMode(!isEditMode)}
-            >
-              {isEditMode ? (
-                <>
-                  <Check className="mr-1 h-4 w-4" />
-                  Klar
-                </>
-              ) : (
-                <>
-                  <Pencil className="mr-1 h-4 w-4" />
-                  Redigera
-                </>
-              )}
-            </Button>
-          </div>
+          {canEdit && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant={isEditMode ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setIsEditMode(!isEditMode)}
+              >
+                {isEditMode ? (
+                  <>
+                    <Check className="mr-1 h-4 w-4" />
+                    Klar
+                  </>
+                ) : (
+                  <>
+                    <Pencil className="mr-1 h-4 w-4" />
+                    Redigera
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Filters */}
@@ -270,10 +297,7 @@ export default function SessionView() {
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <p className="text-lg text-muted-foreground">Inga tempon ännu</p>
             {canEdit && (
-              <Button
-                className="mt-4"
-                onClick={() => setIsAddingNew(true)}
-              >
+              <Button className="mt-4" onClick={() => setIsAddingNew(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Lägg till första tempot
               </Button>
@@ -293,12 +317,16 @@ export default function SessionView() {
               <div className="space-y-3">
                 <AnimatePresence mode="popLayout">
                   {filteredItems.map((item) => (
-                    <div key={item.id} id={`tempo-${item.id}`} className={activeId && activeId !== item.id ? 'transition-all duration-200' : ''}>
+                    <div
+                      key={item.id}
+                      id={`tempo-${item.id}`}
+                      className={activeId && activeId !== item.id ? 'transition-all duration-200' : ''}
+                    >
                       <TempoCard
                         item={item}
                         people={people}
                         onToggleDone={handleToggleDone}
-                        isEditMode={isEditMode}
+                        isEditMode={isEditMode && canEdit}
                         onEdit={(item) => setEditingItem(item)}
                         onDelete={handleDeleteItem}
                         isDragTarget={activeId !== null && activeId !== item.id}
@@ -308,7 +336,7 @@ export default function SessionView() {
                 </AnimatePresence>
               </div>
             </SortableContext>
-            
+
             <DragOverlay>
               {activeItem ? (
                 <div className="rounded-lg border-2 border-primary bg-card p-4 shadow-xl opacity-95">
@@ -325,28 +353,22 @@ export default function SessionView() {
         )}
 
         {/* Add button in edit mode */}
-        {isEditMode && tempoItems.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mt-4"
-          >
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => setIsAddingNew(true)}
-            >
+        {isEditMode && canEdit && tempoItems.length > 0 && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
+            <Button variant="outline" className="w-full" onClick={() => setIsAddingNew(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Lägg till tempo
             </Button>
           </motion.div>
         )}
 
-        {/* Delete section - visible to everyone */}
-        <div className="mt-8 border-t pt-6">
-          <p className="mb-3 text-sm text-muted-foreground">Farozon</p>
-          <DeleteSessionDialog sessionId={session.id} sessionName={session.name} />
-        </div>
+        {/* Delete section - only visible to creator */}
+        {canEdit && (
+          <div className="mt-8 border-t pt-6">
+            <p className="mb-3 text-sm text-muted-foreground">Farozon</p>
+            <DeleteSessionDialog sessionId={session.id} sessionName={session.name} />
+          </div>
+        )}
       </main>
 
       {/* Edit modal */}
