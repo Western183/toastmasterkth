@@ -46,6 +46,35 @@ export type Database = {
           },
         ]
       }
+      pin_attempts: {
+        Row: {
+          attempt_time: string
+          id: string
+          session_id: string
+          success: boolean
+        }
+        Insert: {
+          attempt_time?: string
+          id?: string
+          session_id: string
+          success?: boolean
+        }
+        Update: {
+          attempt_time?: string
+          id?: string
+          session_id?: string
+          success?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pin_attempts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sessions: {
         Row: {
           created_at: string
@@ -147,6 +176,7 @@ export type Database = {
         }
         Returns: string
       }
+      cleanup_old_pin_attempts: { Args: never; Returns: undefined }
       create_session_with_token: {
         Args: {
           p_edit_token: string
