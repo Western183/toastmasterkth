@@ -82,19 +82,26 @@ export async function createSession(
   const shareCode = generateShareCode();
   const editToken = generateEditToken();
 
-  // Insert session directly (INSERT is still allowed via RLS)
-  const { data: session, error } = await supabase
-    .from('sessions')
-    .insert({
-      name,
-      share_code: shareCode,
-      edit_token: editToken,
-      pin_code: pinCode,
-    })
-    .select()
-    .single();
+  // Create session via secure RPC function
+  const { data: sessionId, error } = await supabase.rpc('create_session_with_token', {
+    p_name: name,
+    p_share_code: shareCode,
+    p_edit_token: editToken,
+    p_pin_code: pinCode,
+  });
 
   if (error) throw error;
+  if (!sessionId) throw new Error('Failed to create session');
+
+  // Build the session object
+  const session: Session = {
+    id: sessionId,
+    name,
+    share_code: shareCode,
+    edit_token: editToken,
+    pin_code: pinCode,
+    created_at: new Date().toISOString(),
+  };
 
   let firstPersonId: string | null = null;
 

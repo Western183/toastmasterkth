@@ -19,6 +19,7 @@ import {
   useSensors,
   DragEndEvent,
   DragStartEvent,
+  DragOverEvent,
   DragOverlay,
 } from '@dnd-kit/core';
 import {
@@ -43,6 +44,7 @@ import {
 } from '@/lib/secure-api';
 import { TempoItem } from '@/types/session';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 export default function SessionView() {
   const { id } = useParams<{ id: string }>();
@@ -54,6 +56,7 @@ export default function SessionView() {
   const [editingItem, setEditingItem] = useState<TempoItem | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
 
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -170,11 +173,18 @@ export default function SessionView() {
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
+    setOverId(null);
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event;
+    setOverId(over ? (over.id as string) : null);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
+    setOverId(null);
 
     if (!over || active.id === over.id) return;
     if (!editToken || !id) return;
@@ -308,6 +318,7 @@ export default function SessionView() {
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
           >
             <SortableContext
@@ -316,35 +327,72 @@ export default function SessionView() {
             >
               <div className="space-y-3">
                 <AnimatePresence mode="popLayout">
-                  {filteredItems.map((item) => (
-                    <div
-                      key={item.id}
-                      id={`tempo-${item.id}`}
-                      className={activeId && activeId !== item.id ? 'transition-all duration-200' : ''}
-                    >
-                      <TempoCard
-                        item={item}
-                        people={people}
-                        onToggleDone={handleToggleDone}
-                        isEditMode={isEditMode && canEdit}
-                        onEdit={(item) => setEditingItem(item)}
-                        onDelete={handleDeleteItem}
-                        isDragTarget={activeId !== null && activeId !== item.id}
-                      />
-                    </div>
-                  ))}
+                  {filteredItems.map((item, index) => {
+                    const isHoveredOver = overId === item.id && activeId !== item.id;
+                    const activeIndex = activeId ? filteredItems.findIndex(i => i.id === activeId) : -1;
+                    const currentIndex = index;
+                    const showDropBefore = isHoveredOver && activeIndex > currentIndex;
+                    const showDropAfter = isHoveredOver && activeIndex < currentIndex;
+                    
+                    return (
+                      <div
+                        key={item.id}
+                        id={`tempo-${item.id}`}
+                        className={cn(
+                          'relative',
+                          activeId && activeId !== item.id && 'transition-all duration-200'
+                        )}
+                      >
+                        {/* Drop indicator line before item */}
+                        {showDropBefore && (
+                          <motion.div
+                            initial={{ scaleX: 0, opacity: 0 }}
+                            animate={{ scaleX: 1, opacity: 1 }}
+                            className="absolute -top-1.5 left-0 right-0 h-1 rounded-full bg-primary z-10"
+                          />
+                        )}
+                        
+                        <TempoCard
+                          item={item}
+                          people={people}
+                          onToggleDone={handleToggleDone}
+                          isEditMode={isEditMode && canEdit}
+                          onEdit={(item) => setEditingItem(item)}
+                          onDelete={handleDeleteItem}
+                          isDragTarget={activeId !== null && activeId !== item.id}
+                        />
+                        
+                        {/* Drop indicator line after item */}
+                        {showDropAfter && (
+                          <motion.div
+                            initial={{ scaleX: 0, opacity: 0 }}
+                            animate={{ scaleX: 1, opacity: 1 }}
+                            className="absolute -bottom-1.5 left-0 right-0 h-1 rounded-full bg-primary z-10"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
                 </AnimatePresence>
               </div>
             </SortableContext>
 
-            <DragOverlay>
+            <DragOverlay dropAnimation={{
+              duration: 200,
+              easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+            }}>
               {activeItem ? (
-                <div className="rounded-lg border-2 border-primary bg-card p-4 shadow-xl opacity-95">
+                <div className="drag-overlay-item p-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary text-lg font-bold text-primary-foreground">
                       {activeItem.order_index}
                     </div>
-                    <span className="font-semibold">{activeItem.title}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-semibold">{activeItem.title}</span>
+                      {activeItem.page && (
+                        <span className="ml-2 text-xs text-muted-foreground">s. {activeItem.page}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : null}

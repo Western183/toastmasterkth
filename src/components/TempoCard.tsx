@@ -32,6 +32,7 @@ export const TempoCard = forwardRef<HTMLDivElement, TempoCardProps>(
       transform,
       transition,
       isDragging,
+      over,
     } = useSortable({ id: item.id, disabled: !isEditMode });
 
     const style = {
@@ -39,6 +40,9 @@ export const TempoCard = forwardRef<HTMLDivElement, TempoCardProps>(
       transition,
       zIndex: isDragging ? 50 : undefined,
     };
+
+    // Determine if this item is being hovered over during drag
+    const isOverThis = over?.id === item.id && !isDragging;
 
     return (
       <motion.div
@@ -48,11 +52,13 @@ export const TempoCard = forwardRef<HTMLDivElement, TempoCardProps>(
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
+        data-dragging={isDragging}
         className={cn(
           'relative rounded-lg border-l-4 bg-card p-4 shadow-sm transition-all',
           item.done ? 'border-l-success bg-success-muted' : personColor ? personColor.border : 'border-l-muted',
-          isDragging && 'shadow-lg opacity-90',
-          isDragTarget && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+          isDragging && 'opacity-50 scale-95 border-dashed border-2 border-primary/30 bg-muted/50',
+          isOverThis && 'ring-2 ring-primary ring-offset-2 ring-offset-background scale-[1.01]',
+          isDragTarget && !isOverThis && 'transition-transform duration-150'
         )}
       >
         <div className="flex items-start gap-3">
