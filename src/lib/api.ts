@@ -43,9 +43,9 @@ export async function createSession(name: string, people: { name: string; color:
 
   // Create default tempo items
   const defaultTempos = [
-    { order_index: 0, title: 'Porthos visa', page: '52', note: 'Välkomna', person_id: firstPersonId },
-    { order_index: 1, title: 'Theodor', page: '76', note: 'Presentera förätt + spec', person_id: firstPersonId },
-    { order_index: 2, title: 'En liten blå förgätmigej', page: '90', note: 'Tacka personalen', person_id: firstPersonId },
+    { order_index: 1, title: 'Porthos visa', page: '52', note: 'Välkomna', person_id: firstPersonId },
+    { order_index: 2, title: 'Theodor', page: '76', note: 'Presentera förätt + spec', person_id: firstPersonId },
+    { order_index: 3, title: 'En liten blå förgätmigej', page: '90', note: 'Tacka personalen', person_id: firstPersonId },
   ];
 
   const { error: tempoError } = await supabase
