@@ -79,6 +79,17 @@ export async function getSessionsByIds(ids: string[]): Promise<Session[]> {
   return data as Session[];
 }
 
+export async function getAllSessions(): Promise<Session[]> {
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return data as Session[];
+}
+
 export async function getSessionByCode(code: string): Promise<Session | null> {
   const { data, error } = await supabase
     .from('sessions')
