@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronRight, Calendar, Trash2 } from 'lucide-react';
+import { ChevronRight, Calendar } from 'lucide-react';
 import { Session } from '@/types/session';
-import { getSessionsByIds } from '@/lib/api';
-import { getMySessions, removeFromMySessions, getEditToken } from '@/lib/session-utils';
-import { Button } from '@/components/ui/button';
+import { getAllSessions } from '@/lib/api';
+import { getEditToken } from '@/lib/session-utils';
 import { format } from 'date-fns';
 import { sv } from 'date-fns/locale';
 
@@ -16,14 +15,8 @@ export function MySessionsList() {
 
   useEffect(() => {
     async function loadSessions() {
-      const ids = getMySessions();
-      if (ids.length === 0) {
-        setLoading(false);
-        return;
-      }
-
       try {
-        const data = await getSessionsByIds(ids);
+        const data = await getAllSessions();
         setSessions(data);
       } catch (error) {
         console.error('Error loading sessions:', error);
@@ -35,14 +28,12 @@ export function MySessionsList() {
     loadSessions();
   }, []);
 
-  const handleRemove = (e: React.MouseEvent, sessionId: string) => {
-    e.stopPropagation();
-    removeFromMySessions(sessionId);
-    setSessions(prev => prev.filter(s => s.id !== sessionId));
-  };
-
   if (loading) {
-    return null;
+    return (
+      <div className="mt-8 text-center text-sm text-muted-foreground">
+        Laddar sittningar...
+      </div>
+    );
   }
 
   if (sessions.length === 0) {
@@ -56,7 +47,7 @@ export function MySessionsList() {
       transition={{ delay: 0.1 }}
       className="mt-8 w-full"
     >
-      <h2 className="mb-3 text-sm font-medium text-muted-foreground">Mina sittningar</h2>
+      <h2 className="mb-3 text-sm font-medium text-muted-foreground">Alla sittningar</h2>
       <div className="space-y-2">
         {sessions.map((session) => {
           const isCreator = !!getEditToken(session.id);
@@ -79,20 +70,9 @@ export function MySessionsList() {
                 <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                   <Calendar className="h-3 w-3" />
                   <span>{format(new Date(session.created_at), 'd MMM yyyy', { locale: sv })}</span>
-                  <span className="font-mono">{session.share_code}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  onClick={(e) => handleRemove(e, session.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </motion.button>
           );
         })}
