@@ -107,6 +107,7 @@ export default function SessionView() {
           page: data.page ?? null,
           note: data.note ?? null,
           video_count: data.video_count ?? null,
+          live_count: data.live_count ?? null,
           person_id: data.person_id ?? null,
           order_index: data.order_index!,
           done: false,
@@ -123,6 +124,20 @@ export default function SessionView() {
   const handleDeleteItem = async (itemId: string) => {
     try {
       await deleteTempoItem(itemId);
+      
+      // Reindex remaining items after deletion
+      const remainingItems = tempoItems
+        .filter((item) => item.id !== itemId)
+        .sort((a, b) => a.order_index - b.order_index);
+      
+      if (remainingItems.length > 0) {
+        const reindexUpdates = remainingItems.map((item, index) => ({
+          id: item.id,
+          order_index: index + 1,
+        }));
+        await updateTempoItemsOrder(reindexUpdates);
+      }
+      
       toast.success('Tempo borttaget');
     } catch {
       toast.error('Kunde inte ta bort');

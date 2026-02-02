@@ -19,6 +19,7 @@ export function EditTempoModal({ item, people, onSave, onClose, nextOrderIndex =
   const [page, setPage] = useState(item?.page || '');
   const [note, setNote] = useState(item?.note || '');
   const [videoCount, setVideoCount] = useState(item?.video_count?.toString() || '');
+  const [liveCount, setLiveCount] = useState(item?.live_count?.toString() || '');
   const [personId, setPersonId] = useState(item?.person_id || '');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -30,6 +31,7 @@ export function EditTempoModal({ item, people, onSave, onClose, nextOrderIndex =
       page: page.trim() || null,
       note: note.trim() || null,
       video_count: videoCount ? parseInt(videoCount) : null,
+      live_count: liveCount ? parseInt(liveCount) : null,
       person_id: personId || null,
       order_index: item?.order_index ?? nextOrderIndex,
       done: item?.done ?? false,
@@ -75,26 +77,39 @@ export function EditTempoModal({ item, people, onSave, onClose, nextOrderIndex =
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="page">Sidnummer</Label>
                 <Input
                   id="page"
                   value={page}
                   onChange={(e) => setPage(e.target.value)}
-                  placeholder="t.ex. 42"
+                  placeholder="42"
                   className="h-12"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="video">Antal video</Label>
+                <Label htmlFor="video">Video 📹</Label>
                 <Input
                   id="video"
                   type="number"
                   min="0"
                   value={videoCount}
                   onChange={(e) => setVideoCount(e.target.value)}
+                  placeholder="0"
+                  className="h-12"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="live">Live 🎤</Label>
+                <Input
+                  id="live"
+                  type="number"
+                  min="0"
+                  value={liveCount}
+                  onChange={(e) => setLiveCount(e.target.value)}
                   placeholder="0"
                   className="h-12"
                 />
