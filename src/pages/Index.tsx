@@ -1,24 +1,18 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Music, Users, ArrowRight } from 'lucide-react';
+import { Music, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CreateSessionForm } from '@/components/CreateSessionForm';
-import { JoinSessionForm } from '@/components/JoinSessionForm';
 import { MySessionsList } from '@/components/MySessionsList';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
-type View = 'home' | 'create' | 'join';
+type View = 'home' | 'create';
 
 const Index = () => {
   const [view, setView] = useState<View>('home');
 
   return (
     <div className="flex min-h-screen flex-col bg-background safe-top safe-bottom">
-      {/* Theme toggle in corner */}
-      <div className="absolute right-4 top-4">
-        <ThemeToggle />
-      </div>
-      
       <div className="flex flex-1 flex-col items-center justify-center px-4 py-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -50,16 +44,6 @@ const Index = () => {
                 Skapa ny sittning
               </Button>
 
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full h-16 text-lg"
-                onClick={() => setView('join')}
-              >
-                <ArrowRight className="mr-3 h-5 w-5" />
-                Öppna via kod
-              </Button>
-
               <MySessionsList />
             </motion.div>
           )}
@@ -77,25 +61,12 @@ const Index = () => {
               <CreateSessionForm />
             </>
           )}
-
-          {view === 'join' && (
-            <>
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="mb-4 text-sm text-muted-foreground hover:text-foreground"
-                onClick={() => setView('home')}
-              >
-                ← Tillbaka
-              </motion.button>
-              <JoinSessionForm />
-            </>
-          )}
         </div>
       </div>
 
-      <footer className="pb-4 text-center text-xs text-muted-foreground">
-        KTH Sittningsapp
+      <footer className="flex items-center justify-center gap-4 pb-4">
+        <span className="text-xs text-muted-foreground">KTH Sittningsapp</span>
+        <ThemeToggle />
       </footer>
     </div>
   );
