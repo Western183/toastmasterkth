@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Session, Person, TempoItem } from '@/types/session';
-import { generateShareCode, generateEditToken, saveEditToken } from '@/lib/session-utils';
+import { generateShareCode, generateEditToken, saveEditToken, addToMySessions } from '@/lib/session-utils';
 
 export async function createSession(name: string, people: { name: string; color: string }[]): Promise<Session> {
   const shareCode = generateShareCode();
@@ -33,10 +33,24 @@ export async function createSession(name: string, people: { name: string; color:
     if (peopleError) throw peopleError;
   }
 
-  // Save edit token locally
+  // Save edit token locally (this also adds to my sessions)
   saveEditToken(session.id, editToken);
 
   return session as Session;
+}
+
+export async function getSessionsByIds(ids: string[]): Promise<Session[]> {
+  if (ids.length === 0) return [];
+  
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('*')
+    .in('id', ids)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return data as Session[];
 }
 
 export async function getSessionByCode(code: string): Promise<Session | null> {

@@ -4,6 +4,7 @@ import { Music, Users, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CreateSessionForm } from '@/components/CreateSessionForm';
 import { JoinSessionForm } from '@/components/JoinSessionForm';
+import { MySessionsList } from '@/components/MySessionsList';
 
 type View = 'home' | 'create' | 'join';
 
@@ -52,6 +53,8 @@ const Index = () => {
                 <ArrowRight className="mr-3 h-5 w-5" />
                 Öppna via kod
               </Button>
+
+              <MySessionsList />
             </motion.div>
           )}
 
