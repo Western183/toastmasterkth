@@ -5,7 +5,7 @@ import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { getSessionByCode } from '@/lib/api';
+import { getSessionByShareCode } from '@/lib/secure-api';
 import { addToMySessions } from '@/lib/session-utils';
 import { toast } from 'sonner';
 
@@ -24,7 +24,7 @@ export const JoinSessionForm = forwardRef<HTMLFormElement>(
 
       setLoading(true);
       try {
-        const session = await getSessionByCode(code.trim());
+        const session = await getSessionByShareCode(code.trim());
         if (session) {
           addToMySessions(session.id);
           navigate(`/session/${session.id}`);

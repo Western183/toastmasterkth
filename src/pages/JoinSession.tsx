@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSessionByCode } from '@/lib/api';
+import { getSessionByShareCode } from '@/lib/secure-api';
 import { Loader2 } from 'lucide-react';
 
 export default function JoinSession() {
@@ -15,7 +15,7 @@ export default function JoinSession() {
       }
 
       try {
-        const session = await getSessionByCode(code);
+        const session = await getSessionByShareCode(code);
         if (session) {
           navigate(`/session/${session.id}`, { replace: true });
         } else {
