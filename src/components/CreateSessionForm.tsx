@@ -5,6 +5,7 @@ import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { PERSON_COLORS } from '@/types/session';
 import { createSession } from '@/lib/api';
 import { toast } from 'sonner';
@@ -18,6 +19,7 @@ interface PersonInput {
 export function CreateSessionForm() {
   const navigate = useNavigate();
   const [name, setName] = useState('');
+  const [pinCode, setPinCode] = useState('');
   const [people, setPeople] = useState<PersonInput[]>([
     { id: '1', name: '', color: '1' },
   ]);
@@ -52,6 +54,11 @@ export function CreateSessionForm() {
       return;
     }
 
+    if (pinCode.length !== 4) {
+      toast.error('PIN-koden måste vara exakt 4 siffror');
+      return;
+    }
+
     const validPeople = people.filter((p) => p.name.trim());
     if (validPeople.length === 0) {
       toast.error('Lägg till minst en sångledare');
@@ -62,7 +69,8 @@ export function CreateSessionForm() {
     try {
       const session = await createSession(
         name.trim(),
-        validPeople.map((p) => ({ name: p.name.trim(), color: p.color }))
+        validPeople.map((p) => ({ name: p.name.trim(), color: p.color })),
+        pinCode
       );
       toast.success('Sittning skapad!');
       navigate(`/session/${session.id}`);
@@ -94,6 +102,29 @@ export function CreateSessionForm() {
           className="h-12 text-base"
           autoComplete="off"
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-base font-medium">
+          PIN-kod (4 siffror)
+        </Label>
+        <p className="text-sm text-muted-foreground">
+          Denna kod behövs för att öppna sittningen
+        </p>
+        <div className="flex justify-center py-2">
+          <InputOTP 
+            maxLength={4} 
+            value={pinCode} 
+            onChange={setPinCode}
+          >
+            <InputOTPGroup>
+              <InputOTPSlot index={0} />
+              <InputOTPSlot index={1} />
+              <InputOTPSlot index={2} />
+              <InputOTPSlot index={3} />
+            </InputOTPGroup>
+          </InputOTP>
+        </div>
       </div>
 
       <div className="space-y-3">

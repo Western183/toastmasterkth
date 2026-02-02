@@ -19,6 +19,7 @@ export function generateEditToken(): string {
 // Local storage keys
 const EDIT_TOKENS_KEY = 'sittning_edit_tokens';
 const MY_SESSIONS_KEY = 'sittning_my_sessions';
+const UNLOCKED_SESSIONS_KEY = 'sittning_unlocked_sessions';
 
 interface EditTokenStore {
   [sessionId: string]: string;
@@ -30,8 +31,9 @@ export function saveEditToken(sessionId: string, token: string): void {
   tokens[sessionId] = token;
   localStorage.setItem(EDIT_TOKENS_KEY, JSON.stringify(tokens));
   
-  // Also save to my sessions list
+  // Also save to my sessions list and mark as unlocked
   addToMySessions(sessionId);
+  unlockSession(sessionId);
 }
 
 export function getEditToken(sessionId: string): string | null {
@@ -63,4 +65,23 @@ export function getMySessions(): string[] {
 export function removeFromMySessions(sessionId: string): void {
   const sessions = getMySessions().filter(id => id !== sessionId);
   localStorage.setItem(MY_SESSIONS_KEY, JSON.stringify(sessions));
+}
+
+// PIN unlock tracking - once unlocked, user never needs to enter PIN again
+export function unlockSession(sessionId: string): void {
+  const unlocked = getUnlockedSessions();
+  if (!unlocked.includes(sessionId)) {
+    unlocked.push(sessionId);
+    localStorage.setItem(UNLOCKED_SESSIONS_KEY, JSON.stringify(unlocked));
+  }
+}
+
+export function getUnlockedSessions(): string[] {
+  const stored = localStorage.getItem(UNLOCKED_SESSIONS_KEY);
+  return stored ? JSON.parse(stored) : [];
+}
+
+export function isSessionUnlocked(sessionId: string): boolean {
+  const unlocked = getUnlockedSessions();
+  return unlocked.includes(sessionId);
 }

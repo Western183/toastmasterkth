@@ -2,7 +2,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Session, Person, TempoItem } from '@/types/session';
 import { generateShareCode, generateEditToken, saveEditToken, addToMySessions } from '@/lib/session-utils';
 
-export async function createSession(name: string, people: { name: string; color: string }[]): Promise<Session> {
+export async function createSession(
+  name: string, 
+  people: { name: string; color: string }[],
+  pinCode: string
+): Promise<Session> {
   const shareCode = generateShareCode();
   const editToken = generateEditToken();
 
@@ -12,6 +16,7 @@ export async function createSession(name: string, people: { name: string; color:
       name,
       share_code: shareCode,
       edit_token: editToken,
+      pin_code: pinCode,
     })
     .select()
     .single();

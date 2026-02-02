@@ -52,6 +52,7 @@ export type Database = {
           edit_token: string
           id: string
           name: string
+          pin_code: string | null
           share_code: string
         }
         Insert: {
@@ -59,6 +60,7 @@ export type Database = {
           edit_token: string
           id?: string
           name: string
+          pin_code?: string | null
           share_code: string
         }
         Update: {
@@ -66,6 +68,7 @@ export type Database = {
           edit_token?: string
           id?: string
           name?: string
+          pin_code?: string | null
           share_code?: string
         }
         Relationships: []
@@ -75,6 +78,7 @@ export type Database = {
           created_at: string
           done: boolean
           id: string
+          live_count: number | null
           note: string | null
           order_index: number
           page: string | null
@@ -88,6 +92,7 @@ export type Database = {
           created_at?: string
           done?: boolean
           id?: string
+          live_count?: number | null
           note?: string | null
           order_index: number
           page?: string | null
@@ -101,6 +106,7 @@ export type Database = {
           created_at?: string
           done?: boolean
           id?: string
+          live_count?: number | null
           note?: string | null
           order_index?: number
           page?: string | null

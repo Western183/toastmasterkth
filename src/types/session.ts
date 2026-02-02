@@ -1,12 +1,6 @@
 // Types for the Sittningsschema app
 
-export interface Session {
-  id: string;
-  name: string;
-  share_code: string;
-  edit_token: string;
-  created_at: string;
-}
+// Session is now defined after TempoItem
 
 export interface Person {
   id: string;
@@ -24,10 +18,20 @@ export interface TempoItem {
   page: string | null;
   note: string | null;
   video_count: number | null;
+  live_count: number | null;
   person_id: string | null;
   done: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface Session {
+  id: string;
+  name: string;
+  share_code: string;
+  edit_token: string;
+  pin_code: string | null;
+  created_at: string;
 }
 
 export interface SessionWithData extends Session {
