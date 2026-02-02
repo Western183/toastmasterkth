@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { CreateSessionForm } from '@/components/CreateSessionForm';
 import { JoinSessionForm } from '@/components/JoinSessionForm';
 import { MySessionsList } from '@/components/MySessionsList';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 type View = 'home' | 'create' | 'join';
 
@@ -13,6 +14,11 @@ const Index = () => {
 
   return (
     <div className="flex min-h-screen flex-col bg-background safe-top safe-bottom">
+      {/* Theme toggle in corner */}
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
+      
       <div className="flex flex-1 flex-col items-center justify-center px-4 py-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}

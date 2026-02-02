@@ -5,7 +5,7 @@ import {
   ArrowLeft,
   Plus,
   Pencil,
-  Eye,
+  Check,
   ChevronDown,
   Filter,
   Loader2,
@@ -18,6 +18,8 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -52,8 +54,11 @@ export default function SessionView() {
   const [showOnlyUndone, setShowOnlyUndone] = useState(false);
   const [editingItem, setEditingItem] = useState<TempoItem | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
   
   const listRef = useRef<HTMLDivElement>(null);
+
+  const activeItem = activeId ? tempoItems.find((item) => item.id === activeId) : null;
 
   const canEdit = session ? hasEditAccess(session.id, session.edit_token) : false;
 
@@ -124,8 +129,14 @@ export default function SessionView() {
     }
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveId(null);
+    
     if (!over || active.id === over.id) return;
 
     const oldIndex = tempoItems.findIndex((item) => item.id === active.id);
@@ -204,8 +215,8 @@ export default function SessionView() {
             >
               {isEditMode ? (
                 <>
-                  <Eye className="mr-1 h-4 w-4" />
-                  Visa
+                  <Check className="mr-1 h-4 w-4" />
+                  Klar
                 </>
               ) : (
                 <>
@@ -257,6 +268,7 @@ export default function SessionView() {
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
             <SortableContext
@@ -266,7 +278,7 @@ export default function SessionView() {
               <div className="space-y-3">
                 <AnimatePresence mode="popLayout">
                   {filteredItems.map((item) => (
-                    <div key={item.id} id={`tempo-${item.id}`}>
+                    <div key={item.id} id={`tempo-${item.id}`} className={activeId && activeId !== item.id ? 'transition-all duration-200' : ''}>
                       <TempoCard
                         item={item}
                         people={people}
@@ -274,12 +286,26 @@ export default function SessionView() {
                         isEditMode={isEditMode}
                         onEdit={(item) => setEditingItem(item)}
                         onDelete={handleDeleteItem}
+                        isDragTarget={activeId !== null && activeId !== item.id}
                       />
                     </div>
                   ))}
                 </AnimatePresence>
               </div>
             </SortableContext>
+            
+            <DragOverlay>
+              {activeItem ? (
+                <div className="rounded-lg border-2 border-primary bg-card p-4 shadow-xl opacity-95">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary text-lg font-bold text-primary-foreground">
+                      {activeItem.order_index}
+                    </div>
+                    <span className="font-semibold">{activeItem.title}</span>
+                  </div>
+                </div>
+              ) : null}
+            </DragOverlay>
           </DndContext>
         )}
 
