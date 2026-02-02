@@ -37,8 +37,8 @@ export async function getSessionByShareCode(shareCode: string): Promise<PublicSe
 export async function verifySessionPin(
   sessionId: string,
   pinCode: string
-): Promise<{ valid: boolean; session?: PublicSession }> {
-  const { data, error } = await supabase.rpc('verify_session_pin', {
+): Promise<{ valid: boolean; session?: PublicSession; editToken?: string }> {
+  const { data, error } = await supabase.rpc('verify_session_pin_with_token', {
     p_session_id: sessionId,
     p_pin_code: pinCode,
   });
@@ -60,6 +60,7 @@ export async function verifySessionPin(
           created_at: result.created_at,
         }
       : undefined,
+    editToken: result.edit_token || undefined,
   };
 }
 
@@ -72,6 +73,16 @@ export async function verifyEditToken(sessionId: string, editToken: string): Pro
   if (error) throw error;
 
   return data === true;
+}
+
+export async function getSessionEditToken(sessionId: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('get_session_edit_token', {
+    p_session_id: sessionId,
+  });
+
+  if (error) throw error;
+
+  return data as string | null;
 }
 
 export async function createSession(

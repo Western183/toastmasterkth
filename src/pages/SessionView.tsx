@@ -34,13 +34,14 @@ import { EditTempoModal } from '@/components/EditTempoModal';
 import { ShareDialog } from '@/components/ShareDialog';
 import { DeleteSessionDialog } from '@/components/DeleteSessionDialog';
 import { useSession } from '@/hooks/useSession';
-import { getEditToken } from '@/lib/session-utils';
+import { getEditToken, isSessionUnlocked, saveEditToken } from '@/lib/session-utils';
 import {
   updateTempoDone,
   createTempoItemWithToken,
   updateTempoItemWithToken,
   deleteTempoItemWithToken,
   updateTempoOrderWithToken,
+  getSessionEditToken,
 } from '@/lib/secure-api';
 import { TempoItem } from '@/types/session';
 import { toast } from 'sonner';
@@ -74,9 +75,31 @@ export default function SessionView() {
 
   const activeItem = activeId ? tempoItems.find((item) => item.id === activeId) : null;
 
-  // Get edit token from localStorage
-  const editToken = session ? getEditToken(session.id) : null;
-  const canEdit = !!editToken;
+  // Get edit token from localStorage (for API calls that need it)
+  const [editToken, setEditToken] = useState<string | null>(null);
+  
+  // User can edit if they have unlocked the session with PIN (or are the creator)
+  const canEdit = session ? isSessionUnlocked(session.id) : false;
+
+  // Fetch edit token if session is unlocked but we don't have the token
+  useEffect(() => {
+    async function fetchEditToken() {
+      if (session && canEdit && !editToken) {
+        const storedToken = getEditToken(session.id);
+        if (storedToken) {
+          setEditToken(storedToken);
+        } else {
+          // Fetch from server and save
+          const token = await getSessionEditToken(session.id);
+          if (token) {
+            saveEditToken(session.id, token);
+            setEditToken(token);
+          }
+        }
+      }
+    }
+    fetchEditToken();
+  }, [session, canEdit, editToken]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
