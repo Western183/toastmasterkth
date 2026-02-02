@@ -285,30 +285,29 @@ export default function SessionView() {
           </DndContext>
         )}
 
-        {/* Add button and delete option in edit mode */}
-        {isEditMode && (
+        {/* Add button in edit mode */}
+        {isEditMode && tempoItems.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="mt-6 space-y-4"
+            className="mt-4"
           >
-            {tempoItems.length > 0 && (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => setIsAddingNew(true)}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Lägg till tempo
-              </Button>
-            )}
-
-            <div className="border-t pt-6">
-              <p className="mb-3 text-sm text-muted-foreground">Farozon</p>
-              <DeleteSessionDialog sessionId={session.id} sessionName={session.name} />
-            </div>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setIsAddingNew(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Lägg till tempo
+            </Button>
           </motion.div>
         )}
+
+        {/* Delete section - visible to everyone */}
+        <div className="mt-8 border-t pt-6">
+          <p className="mb-3 text-sm text-muted-foreground">Farozon</p>
+          <DeleteSessionDialog sessionId={session.id} sessionName={session.name} />
+        </div>
       </main>
 
       {/* Edit modal */}
