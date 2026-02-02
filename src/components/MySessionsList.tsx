@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronRight, Calendar, Trash2 } from 'lucide-react';
+import { ChevronRight, Calendar } from 'lucide-react';
 import { Session } from '@/types/session';
-import { getAllSessions, deleteSession } from '@/lib/api';
+import { getAllSessions } from '@/lib/api';
 import { getEditToken } from '@/lib/session-utils';
-import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { sv } from 'date-fns/locale';
-import { toast } from 'sonner';
 
 export function MySessionsList() {
   const navigate = useNavigate();
@@ -29,23 +27,6 @@ export function MySessionsList() {
 
     loadSessions();
   }, []);
-
-  const handleDelete = async (e: React.MouseEvent, session: Session) => {
-    e.stopPropagation();
-    
-    if (!confirm(`Vill du verkligen ta bort "${session.name}"?`)) {
-      return;
-    }
-
-    try {
-      await deleteSession(session.id);
-      setSessions(prev => prev.filter(s => s.id !== session.id));
-      toast.success('Sittningen har tagits bort');
-    } catch (error) {
-      console.error('Error deleting session:', error);
-      toast.error('Kunde inte ta bort sittningen');
-    }
-  };
 
   if (loading) {
     return (
@@ -91,17 +72,7 @@ export function MySessionsList() {
                   <span>{format(new Date(session.created_at), 'd MMM yyyy', { locale: sv })}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  onClick={(e) => handleDelete(e, session)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </motion.button>
           );
         })}
