@@ -59,7 +59,9 @@ export function ShareDialog({ shareCode, sessionId }: ShareDialogProps) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Dela sittningen</DialogTitle>
+          <DialogTitle asChild>
+            <h2>Dela sittningen</h2>
+          </DialogTitle>
           <DialogDescription>
             Dela koden eller länken med andra sångledare
           </DialogDescription>
