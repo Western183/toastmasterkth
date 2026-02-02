@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { PERSON_COLORS } from '@/types/session';
-import { createSession } from '@/lib/api';
+import { createSession } from '@/lib/secure-api';
 import { toast } from 'sonner';
 
 interface PersonInput {

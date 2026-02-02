@@ -44,13 +44,6 @@ export type Database = {
             referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "people_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "sessions_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       sessions: {
@@ -138,38 +131,11 @@ export type Database = {
             referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "tempo_items_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "sessions_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
     }
     Views: {
-      sessions_public: {
-        Row: {
-          created_at: string | null
-          id: string | null
-          name: string | null
-          share_code: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string | null
-          name?: string | null
-          share_code?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string | null
-          name?: string | null
-          share_code?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       add_person_with_token: {
@@ -206,6 +172,15 @@ export type Database = {
       delete_tempo_item_with_token: {
         Args: { p_edit_token: string; p_item_id: string }
         Returns: boolean
+      }
+      get_all_sessions_public: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          name: string
+          share_code: string
+        }[]
       }
       get_session_by_share_code: {
         Args: { p_share_code: string }

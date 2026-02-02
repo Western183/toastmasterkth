@@ -1,10 +1,16 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { TempoItem, Person, Session } from '@/types/session';
-import { getSessionById, getPeopleBySessionId, getTempoItemsBySessionId } from '@/lib/api';
+import { TempoItem, Person } from '@/types/session';
+import { getPeopleBySessionId, getTempoItemsBySessionId } from '@/lib/secure-api';
+import { PublicSession } from '@/lib/secure-api';
+
+// Session info we can retrieve without exposing sensitive data
+export interface SessionInfo extends PublicSession {
+  has_pin?: boolean;
+}
 
 export function useSession(sessionId: string | undefined) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<SessionInfo | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [tempoItems, setTempoItems] = useState<TempoItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,13 +24,33 @@ export function useSession(sessionId: string | undefined) {
 
     try {
       setLoading(true);
-      const [sessionData, peopleData, tempoData] = await Promise.all([
-        getSessionById(sessionId),
+      
+      // Get session info via RPC (doesn't expose sensitive fields)
+      const { data: sessionData, error: sessionError } = await supabase.rpc('verify_session_pin', {
+        p_session_id: sessionId,
+        p_pin_code: '', // Empty PIN just to get session info
+      });
+
+      if (sessionError) throw sessionError;
+
+      if (sessionData && sessionData.length > 0) {
+        const s = sessionData[0];
+        setSession({
+          id: s.id,
+          name: s.name,
+          share_code: s.share_code,
+          created_at: s.created_at,
+        });
+      } else {
+        setSession(null);
+      }
+
+      // Get people and tempo items (read is allowed)
+      const [peopleData, tempoData] = await Promise.all([
         getPeopleBySessionId(sessionId),
         getTempoItemsBySessionId(sessionId),
       ]);
 
-      setSession(sessionData);
       setPeople(peopleData);
       setTempoItems(tempoData);
       setError(null);
