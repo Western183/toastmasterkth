@@ -75,15 +75,8 @@ export async function verifyEditToken(sessionId: string, editToken: string): Pro
   return data === true;
 }
 
-export async function getSessionEditToken(sessionId: string): Promise<string | null> {
-  const { data, error } = await supabase.rpc('get_session_edit_token', {
-    p_session_id: sessionId,
-  });
-
-  if (error) throw error;
-
-  return data as string | null;
-}
+// getSessionEditToken was removed for security - tokens are now only
+// returned via verify_session_pin_with_token after PIN verification
 
 export async function createSession(
   name: string,
