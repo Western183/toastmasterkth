@@ -92,16 +92,14 @@ export function MySessionsList() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {isCreator && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={(e) => handleDelete(e, session)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  onClick={(e) => handleDelete(e, session)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </div>
             </motion.button>
