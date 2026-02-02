@@ -14,11 +14,12 @@ interface TempoCardProps {
   isEditMode?: boolean;
   onEdit?: (item: TempoItem) => void;
   onDelete?: (id: string) => void;
+  isDragTarget?: boolean;
 }
 
 export const TempoCard = forwardRef<HTMLDivElement, TempoCardProps>(
   function TempoCard(
-    { item, people, onToggleDone, isEditMode = false, onEdit, onDelete },
+    { item, people, onToggleDone, isEditMode = false, onEdit, onDelete, isDragTarget = false },
     _ref
   ) {
     const person = people.find((p) => p.id === item.person_id);
@@ -50,7 +51,8 @@ export const TempoCard = forwardRef<HTMLDivElement, TempoCardProps>(
         className={cn(
           'relative rounded-lg border-l-4 bg-card p-4 shadow-sm transition-all',
           item.done ? 'border-l-success bg-success-muted' : personColor ? personColor.border : 'border-l-muted',
-          isDragging && 'shadow-lg opacity-90'
+          isDragging && 'shadow-lg opacity-90',
+          isDragTarget && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
         )}
       >
         <div className="flex items-start gap-3">
@@ -113,12 +115,14 @@ export const TempoCard = forwardRef<HTMLDivElement, TempoCardProps>(
                 </div>
               )}
               
-              {personColor && (
-                <div
-                  className="h-3 w-3 rounded-full"
-                  style={{ backgroundColor: personColor.hsl }}
-                  title={person?.name}
-                />
+              {personColor && person && (
+                <div className="flex items-center gap-1.5">
+                  <div
+                    className="h-3 w-3 rounded-full"
+                    style={{ backgroundColor: personColor.hsl }}
+                  />
+                  <span className="text-xs text-muted-foreground">{person.name}</span>
+                </div>
               )}
             </div>
           </div>
