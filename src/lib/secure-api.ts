@@ -137,7 +137,7 @@ export async function createSession(
     { order_index: 6, title: 'Sång', page: null, note: 'Efterätt + spec', person_id: firstPersonId },
     { order_index: 7, title: 'Punchen kommer', page: '80', note: null, person_id: firstPersonId },
     { order_index: 8, title: 'Sång', page: null, note: null, person_id: firstPersonId },
-    { order_index: 9, title: 'Punsch', page: '88', note: null, person_id: firstPersonId },
+    { order_index: 9, title: 'Sista punschen', page: '88', note: null, person_id: firstPersonId },
     { order_index: 10, title: 'En liten blå förgätmigej', page: '90', note: 'Tacka personalen', person_id: firstPersonId },
   ];
 
