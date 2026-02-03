@@ -131,7 +131,14 @@ export async function createSession(
   const defaultTempos = [
     { order_index: 1, title: 'Porthos visa', page: '52', note: 'Välkomna', person_id: firstPersonId },
     { order_index: 2, title: 'Theodor', page: '76', note: 'Presentera förätt + spec', person_id: firstPersonId },
-    { order_index: 3, title: 'En liten blå förgätmigej', page: '90', note: 'Tacka personalen', person_id: firstPersonId },
+    { order_index: 3, title: 'Sång', page: null, note: null, person_id: firstPersonId },
+    { order_index: 4, title: 'Sång', page: null, note: 'Presentera Huvudrätt + Spec', person_id: firstPersonId },
+    { order_index: 5, title: 'Sång', page: null, note: null, person_id: firstPersonId },
+    { order_index: 6, title: 'Sång', page: null, note: 'Efterätt + spec', person_id: firstPersonId },
+    { order_index: 7, title: 'Punchen kommer', page: '80', note: null, person_id: firstPersonId },
+    { order_index: 8, title: 'Sång', page: null, note: null, person_id: firstPersonId },
+    { order_index: 9, title: 'Punsch', page: '88', note: null, person_id: firstPersonId },
+    { order_index: 10, title: 'En liten blå förgätmigej', page: '90', note: 'Tacka personalen', person_id: firstPersonId },
   ];
 
   for (const t of defaultTempos) {
