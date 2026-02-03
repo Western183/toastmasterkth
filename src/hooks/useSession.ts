@@ -24,11 +24,12 @@ export function useSession(sessionId: string | undefined) {
   const [error, setError] = useState<Error | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [realtimeRetry, setRealtimeRetry] = useState(0);
   
   // Track pending optimistic updates - VERY short expiry for done status
   const pendingUpdatesRef = useRef<Map<string, { timestamp: number; field: string }>>(new Map());
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const retryTimerRef = useRef<number | null>(null);
   
   // Check if an update is still pending (500ms expiry for done, 2s for others)
   const isPending = useCallback((itemId: string, field?: string) => {
@@ -106,20 +107,14 @@ export function useSession(sessionId: string | undefined) {
 
   // Broadcast done status change to other clients immediately
   const broadcastDoneChange = useCallback((itemId: string, done: boolean) => {
-    if (broadcastChannelRef.current) {
-      console.log('[Broadcast] Sending done_changed:', itemId, done);
-      broadcastChannelRef.current.send({
-        type: 'broadcast',
-        event: 'done_changed',
-        payload: { itemId, done, timestamp: Date.now() },
-      }).then(() => {
-        console.log('[Broadcast] Message sent successfully');
-      }).catch((err) => {
-        console.error('[Broadcast] Failed to send:', err);
-      });
-    } else {
-      console.warn('[Broadcast] Channel not ready');
-    }
+    const ch = channelRef.current;
+    if (!ch) return;
+    // With ack:true on the channel config, this rejects when not subscribed.
+    void ch.send({
+      type: 'broadcast',
+      event: 'done_changed',
+      payload: { itemId, done, timestamp: Date.now() },
+    });
   }, []);
 
   // Update a single tempo item optimistically
@@ -185,46 +180,31 @@ export function useSession(sessionId: string | undefined) {
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
-    if (broadcastChannelRef.current) {
-      supabase.removeChannel(broadcastChannelRef.current);
-      broadcastChannelRef.current = null;
+
+    if (retryTimerRef.current) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
     }
 
-    // BROADCAST channel for instant done-status sync (faster than postgres_changes)
-    const broadcastChannel = supabase
-      .channel(`tempo-broadcast-${sessionId}`, {
+    setIsSyncing(true);
+
+    // Single channel with BOTH broadcast + postgres_changes.
+    // Using ack:true makes send() reject when not SUBSCRIBED (avoids silent drops).
+    const channel = supabase
+      .channel(`tempo-${sessionId}`, {
         config: {
-          broadcast: { self: false }, // Don't receive our own broadcasts
+          broadcast: { self: false, ack: true },
         },
       })
       .on('broadcast', { event: 'done_changed' }, (payload) => {
         const { itemId, done } = payload.payload as { itemId: string; done: boolean; timestamp: number };
-        
-        console.log('[Broadcast] Received done_changed:', itemId, done);
-        
-        // Skip if this is our own pending update
-        if (isPending(itemId)) {
-          console.log('[Broadcast] Skipping - item is pending locally');
-          return;
-        }
-        
-        // Apply the done change immediately
-        setTempoItems((prev) =>
-          prev.map((item) =>
-            item.id === itemId ? { ...item, done } : item
-          )
-        );
+
+        // Skip if item is being updated locally
+        if (isPending(itemId)) return;
+
+        setTempoItems((prev) => prev.map((item) => (item.id === itemId ? { ...item, done } : item)));
         setLastSyncTime(new Date());
       })
-      .subscribe((status) => {
-        console.log('[Broadcast] Channel status:', status);
-      });
-    
-    broadcastChannelRef.current = broadcastChannel;
-
-    // Database changes channel (for INSERT, DELETE, and full state sync)
-    const channel = supabase
-      .channel(`tempo-db-${sessionId}`)
       .on(
         'postgres_changes',
         {
@@ -302,12 +282,16 @@ export function useSession(sessionId: string | undefined) {
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           setIsSyncing(false);
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setLastSyncTime(new Date());
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           setIsSyncing(true);
-          // Reconnect after delay
-          setTimeout(() => {
-            fetchData();
-          }, 2000);
+          if (!retryTimerRef.current) {
+            retryTimerRef.current = window.setTimeout(() => {
+              retryTimerRef.current = null;
+              fetchData();
+              setRealtimeRetry((n) => n + 1);
+            }, 1000);
+          }
         }
       });
 
@@ -318,12 +302,12 @@ export function useSession(sessionId: string | undefined) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
-      if (broadcastChannelRef.current) {
-        supabase.removeChannel(broadcastChannelRef.current);
-        broadcastChannelRef.current = null;
+      if (retryTimerRef.current) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
       }
     };
-  }, [sessionId, fetchData, isPending, clearPending]);
+  }, [sessionId, fetchData, isPending, clearPending, realtimeRetry]);
 
   return {
     session,
