@@ -6,7 +6,6 @@ import {
   Plus,
   Pencil,
   Check,
-  ChevronDown,
   Filter,
   Loader2,
 } from 'lucide-react';
@@ -105,10 +104,6 @@ export default function SessionView() {
     }
     return tempoItems;
   }, [tempoItems, showOnlyUndone]);
-
-  const nextUndoneItem = useMemo(() => {
-    return tempoItems.find((item) => !item.done);
-  }, [tempoItems]);
 
   const doneCount = useMemo(() => {
     return tempoItems.filter((item) => item.done).length;
@@ -316,13 +311,6 @@ export default function SessionView() {
     }
   };
 
-  const scrollToNextUndone = () => {
-    if (nextUndoneItem) {
-      const element = document.getElementById(`tempo-${nextUndoneItem.id}`);
-      element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -398,13 +386,6 @@ export default function SessionView() {
             <Filter className="mr-1 h-4 w-4" />
             {showOnlyUndone ? 'Visa alla' : 'Endast ej körda'}
           </Button>
-
-          {nextUndoneItem && !showOnlyUndone && (
-            <Button variant="ghost" size="sm" onClick={scrollToNextUndone}>
-              <ChevronDown className="mr-1 h-4 w-4" />
-              Nästa ({nextUndoneItem.order_index})
-            </Button>
-          )}
         </div>
       </header>
 
