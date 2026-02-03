@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -33,8 +33,9 @@ import { InlineTempoCard } from '@/components/InlineTempoCard';
 import { EditTempoModal } from '@/components/EditTempoModal';
 import { ShareDialog } from '@/components/ShareDialog';
 import { DeleteSessionDialog } from '@/components/DeleteSessionDialog';
+import { SyncStatus } from '@/components/SyncStatus';
 import { useSession } from '@/hooks/useSession';
-import { getEditToken, isSessionUnlocked, saveEditToken } from '@/lib/session-utils';
+import { getEditToken, isSessionUnlocked } from '@/lib/session-utils';
 import {
   updateTempoDone,
   createTempoItemWithToken,
@@ -49,53 +50,49 @@ import { cn } from '@/lib/utils';
 export default function SessionView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { session, people, tempoItems: serverTempoItems, loading, error } = useSession(id);
-
-  // Local state for optimistic updates
-  const [localTempoItems, setLocalTempoItems] = useState<TempoItem[]>([]);
+  const {
+    session,
+    people,
+    tempoItems,
+    loading,
+    error,
+    isSyncing,
+    lastSyncTime,
+    optimisticUpdate,
+    revertUpdate,
+    optimisticDelete,
+    optimisticAdd,
+    optimisticReorder,
+    confirmSync,
+  } = useSession(id);
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [showOnlyUndone, setShowOnlyUndone] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [editToken, setEditToken] = useState<string | null>(() => {
+    if (id) return getEditToken(id);
+    return null;
+  });
 
   const listRef = useRef<HTMLDivElement>(null);
-
-  // Sync local state with server state (but prefer local for optimistic updates)
-  useEffect(() => {
-    if (serverTempoItems) {
-      setLocalTempoItems(serverTempoItems);
-    }
-  }, [serverTempoItems]);
-
-  // Use local state for rendering
-  const tempoItems = localTempoItems;
-
   const activeItem = activeId ? tempoItems.find((item) => item.id === activeId) : null;
 
-  // Get edit token from localStorage (for API calls that need it)
-  const [editToken, setEditToken] = useState<string | null>(null);
-  
   // User can edit if they have unlocked the session with PIN (or are the creator)
   const canEdit = session ? isSessionUnlocked(session.id) : false;
 
-  // Load edit token from localStorage if session is unlocked
-  // Token is stored during PIN verification (MySessionsList.tsx)
-  useEffect(() => {
+  // Update edit token when session changes
+  useMemo(() => {
     if (session && canEdit && !editToken) {
       const storedToken = getEditToken(session.id);
-      if (storedToken) {
-        setEditToken(storedToken);
-      }
+      if (storedToken) setEditToken(storedToken);
     }
   }, [session, canEdit, editToken]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
+      activationConstraint: { distance: 8 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -117,125 +114,156 @@ export default function SessionView() {
     return tempoItems.filter((item) => item.done).length;
   }, [tempoItems]);
 
-  // Handle toggle done - optimistic update (requires edit token)
+  // Handle toggle done - optimistic update
   const handleToggleDone = useCallback(async (itemId: string, done: boolean) => {
     if (!editToken) {
       toast.error('Du har inte behörighet att ändra status');
       return;
     }
 
-    // Optimistic update
-    setLocalTempoItems((prev) =>
-      prev.map((item) => (item.id === itemId ? { ...item, done } : item))
-    );
+    const original = tempoItems.find((item) => item.id === itemId);
+    if (!original) return;
+
+    // Optimistic update - instant UI response
+    optimisticUpdate(itemId, { done });
 
     try {
-      await updateTempoDone(itemId, done, editToken);
+      const success = await updateTempoDone(itemId, done, editToken);
+      if (success) {
+        confirmSync([itemId]);
+      } else {
+        revertUpdate(itemId, original);
+        toast.error('Kunde inte uppdatera status');
+      }
     } catch {
-      // Revert on error
-      setLocalTempoItems((prev) =>
-        prev.map((item) => (item.id === itemId ? { ...item, done: !done } : item))
-      );
+      revertUpdate(itemId, original);
       toast.error('Kunde inte uppdatera status');
     }
-  }, [editToken]);
+  }, [editToken, tempoItems, optimisticUpdate, revertUpdate, confirmSync]);
 
-  // Handle inline update - optimistic update with debounced save
+  // Handle inline update - debounced save to backend
   const handleInlineUpdate = useCallback(async (itemId: string, updates: Partial<TempoItem>) => {
     if (!editToken || !id) {
       toast.error('Du har inte behörighet att redigera');
       return;
     }
 
+    const original = tempoItems.find((item) => item.id === itemId);
+    if (!original) return;
+
     // Optimistic update
-    setLocalTempoItems((prev) =>
-      prev.map((item) => (item.id === itemId ? { ...item, ...updates } : item))
-    );
+    optimisticUpdate(itemId, updates);
 
     try {
       const success = await updateTempoItemWithToken(itemId, editToken, updates);
-      if (!success) {
-        // Revert by refetching from server
-        setLocalTempoItems(serverTempoItems);
+      if (success) {
+        confirmSync([itemId]);
+      } else {
+        revertUpdate(itemId, original);
         toast.error('Kunde inte spara ändring');
       }
     } catch {
-      setLocalTempoItems(serverTempoItems);
+      revertUpdate(itemId, original);
       toast.error('Kunde inte spara ändring');
     }
-  }, [editToken, id, serverTempoItems]);
+  }, [editToken, id, tempoItems, optimisticUpdate, revertUpdate, confirmSync]);
 
-  // Handle adding new item via modal
+  // Handle adding new item
   const handleAddNewItem = async (data: Partial<TempoItem>) => {
     if (!editToken || !id) {
       toast.error('Du har inte behörighet att redigera');
       return;
     }
 
+    // Create optimistic item with temporary ID
+    const tempId = `temp-${Date.now()}`;
+    const newItem: TempoItem = {
+      id: tempId,
+      session_id: id,
+      title: data.title!,
+      page: data.page ?? null,
+      note: data.note ?? null,
+      video_count: data.video_count ?? null,
+      live_count: data.live_count ?? null,
+      person_id: data.person_id ?? null,
+      order_index: tempoItems.length + 1,
+      done: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    optimisticAdd(newItem);
+    setIsAddingNew(false);
+
     try {
-      const newId = await createTempoItemWithToken(id, editToken, {
-        title: data.title!,
-        page: data.page ?? null,
-        note: data.note ?? null,
-        video_count: data.video_count ?? null,
-        live_count: data.live_count ?? null,
-        person_id: data.person_id ?? null,
-        order_index: data.order_index!,
+      const realId = await createTempoItemWithToken(id, editToken, {
+        title: newItem.title,
+        page: newItem.page,
+        note: newItem.note,
+        video_count: newItem.video_count,
+        live_count: newItem.live_count,
+        person_id: newItem.person_id,
+        order_index: newItem.order_index,
         done: false,
       });
-      if (!newId) {
+
+      if (!realId) {
         toast.error('Kunde inte skapa - ogiltig token');
+        // Remove the optimistic item
+        optimisticDelete(tempId);
         return;
       }
+      
+      confirmSync([realId]);
       toast.success('Tempo tillagt');
-      setIsAddingNew(false);
     } catch {
+      optimisticDelete(tempId);
       toast.error('Kunde inte skapa');
     }
   };
 
-  // Handle delete with optimistic UI update and reindex
+  // Handle delete with optimistic UI and reindex
   const handleDeleteItem = useCallback(async (itemId: string) => {
     if (!editToken || !id) {
       toast.error('Du har inte behörighet att ta bort');
       return;
     }
 
-    // Store original for rollback
-    const originalItems = [...localTempoItems];
+    const originalItems = [...tempoItems];
 
-    // Optimistic update: remove item and reindex
-    const remainingItems = localTempoItems
-      .filter((item) => item.id !== itemId)
-      .sort((a, b) => a.order_index - b.order_index)
-      .map((item, index) => ({ ...item, order_index: index + 1 }));
-
-    setLocalTempoItems(remainingItems);
+    // Optimistic delete and reindex
+    optimisticDelete(itemId);
 
     try {
-      // Delete from database
       const success = await deleteTempoItemWithToken(itemId, editToken);
       if (!success) {
-        setLocalTempoItems(originalItems);
+        // Revert by adding back the original items
+        originalItems.forEach((item) => {
+          if (!tempoItems.some((t) => t.id === item.id)) {
+            optimisticAdd(item);
+          }
+        });
         toast.error('Kunde inte ta bort - ogiltig token');
         return;
       }
 
       // Reindex remaining items in database
+      const remainingItems = tempoItems
+        .filter((item) => item.id !== itemId)
+        .map((item, index) => ({ id: item.id, order_index: index + 1 }));
+
       if (remainingItems.length > 0) {
-        const reindexUpdates = remainingItems.map((item) => ({
-          id: item.id,
-          order_index: item.order_index,
-        }));
-        await updateTempoOrderWithToken(id, editToken, reindexUpdates);
+        await updateTempoOrderWithToken(id, editToken, remainingItems);
       }
 
+      confirmSync(remainingItems.map((i) => i.id));
       toast.success('Tempo borttaget');
     } catch {
-      setLocalTempoItems(originalItems);
+      // Restore original state
+      originalItems.forEach((item) => optimisticAdd(item));
       toast.error('Kunde inte ta bort');
     }
-  }, [editToken, id, localTempoItems]);
+  }, [editToken, id, tempoItems, optimisticDelete, optimisticAdd, confirmSync]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -243,8 +271,7 @@ export default function SessionView() {
   };
 
   const handleDragOver = (event: DragOverEvent) => {
-    const { over } = event;
-    setOverId(over ? (over.id as string) : null);
+    setOverId(event.over ? (event.over.id as string) : null);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -258,29 +285,33 @@ export default function SessionView() {
     const oldIndex = tempoItems.findIndex((item) => item.id === active.id);
     const newIndex = tempoItems.findIndex((item) => item.id === over.id);
 
-    // Create reordered array with new indices
+    // Create reordered array
     const reorderedItems = [...tempoItems];
     const [removed] = reorderedItems.splice(oldIndex, 1);
     reorderedItems.splice(newIndex, 0, removed);
 
-    // Update order indices
+    // Renumber 1..N
     const updatedItems = reorderedItems.map((item, index) => ({
       ...item,
       order_index: index + 1,
     }));
 
-    // Optimistic update
-    setLocalTempoItems(updatedItems);
+    // Optimistic reorder
+    optimisticReorder(updatedItems);
 
     try {
       const updates = updatedItems.map((item) => ({
         id: item.id,
         order_index: item.order_index,
       }));
-      await updateTempoOrderWithToken(id, editToken, updates);
+      const success = await updateTempoOrderWithToken(id, editToken, updates);
+      if (success) {
+        confirmSync(updates.map((u) => u.id));
+      } else {
+        // On failure, refetch will fix it
+        toast.error('Kunde inte ändra ordning');
+      }
     } catch {
-      // Revert on error
-      setLocalTempoItems(serverTempoItems);
       toast.error('Kunde inte ändra ordning');
     }
   };
@@ -325,33 +356,34 @@ export default function SessionView() {
 
           <div className="flex-1 min-w-0">
             <h1 className="truncate text-lg font-semibold">{session.name}</h1>
-            <p className="text-xs text-muted-foreground">
-              {doneCount}/{tempoItems.length} körda
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground">
+                {doneCount}/{tempoItems.length} körda
+              </p>
+              <SyncStatus isSyncing={isSyncing} lastSyncTime={lastSyncTime} />
+            </div>
           </div>
 
           <ShareDialog shareCode={session.share_code} sessionId={session.id} />
 
           {canEdit && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant={isEditMode ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setIsEditMode(!isEditMode)}
-              >
-                {isEditMode ? (
-                  <>
-                    <Check className="mr-1 h-4 w-4" />
-                    Klar
-                  </>
-                ) : (
-                  <>
-                    <Pencil className="mr-1 h-4 w-4" />
-                    Redigera
-                  </>
-                )}
-              </Button>
-            </div>
+            <Button
+              variant={isEditMode ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setIsEditMode(!isEditMode)}
+            >
+              {isEditMode ? (
+                <>
+                  <Check className="mr-1 h-4 w-4" />
+                  Klar
+                </>
+              ) : (
+                <>
+                  <Pencil className="mr-1 h-4 w-4" />
+                  Redigera
+                </>
+              )}
+            </Button>
           )}
         </div>
 
@@ -404,7 +436,9 @@ export default function SessionView() {
                 <AnimatePresence mode="popLayout">
                   {filteredItems.map((item, index) => {
                     const isHoveredOver = overId === item.id && activeId !== item.id;
-                    const activeIndex = activeId ? filteredItems.findIndex((i) => i.id === activeId) : -1;
+                    const activeIndex = activeId
+                      ? filteredItems.findIndex((i) => i.id === activeId)
+                      : -1;
                     const currentIndex = index;
                     const showDropBefore = isHoveredOver && activeIndex > currentIndex;
                     const showDropAfter = isHoveredOver && activeIndex < currentIndex;
@@ -418,7 +452,6 @@ export default function SessionView() {
                           activeId && activeId !== item.id && 'transition-all duration-200'
                         )}
                       >
-                        {/* Drop indicator line before item */}
                         {showDropBefore && (
                           <motion.div
                             initial={{ scaleX: 0, opacity: 0 }}
@@ -437,7 +470,6 @@ export default function SessionView() {
                           isDragTarget={activeId !== null && activeId !== item.id}
                         />
 
-                        {/* Drop indicator line after item */}
                         {showDropAfter && (
                           <motion.div
                             initial={{ scaleX: 0, opacity: 0 }}
@@ -467,7 +499,9 @@ export default function SessionView() {
                     <div className="flex-1 min-w-0">
                       <span className="font-semibold">{activeItem.title}</span>
                       {activeItem.page && (
-                        <span className="ml-2 text-xs text-muted-foreground">s. {activeItem.page}</span>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          s. {activeItem.page}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -496,7 +530,7 @@ export default function SessionView() {
         )}
       </main>
 
-      {/* Add new modal - only for adding new items */}
+      {/* Add new modal */}
       {isAddingNew && (
         <EditTempoModal
           item={null}
