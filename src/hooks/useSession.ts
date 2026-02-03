@@ -25,9 +25,21 @@ export function useSession(sessionId: string | undefined) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   
-  // Track pending optimistic updates to avoid reverting them on realtime events
-  const pendingUpdatesRef = useRef<Set<string>>(new Set());
+  // Track pending optimistic updates with timestamps for auto-expiry
+  const pendingUpdatesRef = useRef<Map<string, number>>(new Map());
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  
+  // Check if an update is still pending (with 2 second expiry)
+  const isPending = useCallback((itemId: string) => {
+    const timestamp = pendingUpdatesRef.current.get(itemId);
+    if (!timestamp) return false;
+    // Expire pending status after 2 seconds
+    if (Date.now() - timestamp > 2000) {
+      pendingUpdatesRef.current.delete(itemId);
+      return false;
+    }
+    return true;
+  }, []);
 
   const fetchData = useCallback(async () => {
     if (!sessionId) {
@@ -79,13 +91,9 @@ export function useSession(sessionId: string | undefined) {
     fetchData();
   }, [fetchData]);
 
-  // Optimistic update helper - marks an item as pending
+  // Mark an item as pending update (will expire after 2s)
   const markPending = useCallback((itemId: string) => {
-    pendingUpdatesRef.current.add(itemId);
-    // Auto-clear after 5 seconds (safety net)
-    setTimeout(() => {
-      pendingUpdatesRef.current.delete(itemId);
-    }, 5000);
+    pendingUpdatesRef.current.set(itemId, Date.now());
   }, []);
 
   // Clear pending status for an item
@@ -140,17 +148,18 @@ export function useSession(sessionId: string | undefined) {
     setLastSyncTime(new Date());
   }, [clearPending]);
 
-  // Set up realtime subscription with robust handling
+  // Set up realtime subscription - SIMPLIFIED AND ROBUST
   useEffect(() => {
     if (!sessionId) return;
 
     // Clean up existing channel first
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
     }
 
     const channel = supabase
-      .channel(`session-realtime-${sessionId}`)
+      .channel(`tempo-sync-${sessionId}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -160,37 +169,40 @@ export function useSession(sessionId: string | undefined) {
           filter: `session_id=eq.${sessionId}`,
         },
         (payload) => {
-          // Skip if this is a pending optimistic update
-          const itemId = (payload.new as TempoItem)?.id || (payload.old as { id?: string })?.id;
-          if (itemId && pendingUpdatesRef.current.has(itemId)) {
-            // Clear the pending flag since we received confirmation
-            pendingUpdatesRef.current.delete(itemId);
+          const newItem = payload.new as TempoItem;
+          const oldItem = payload.old as { id?: string };
+          const itemId = newItem?.id || oldItem?.id;
+          
+          // Skip if this is a pending optimistic update from THIS device
+          if (itemId && isPending(itemId)) {
+            // Clear pending since DB confirmed the change
+            clearPending(itemId);
             return;
           }
 
+          // Handle different event types
           if (payload.eventType === 'INSERT') {
             setTempoItems((prev) => {
               // Avoid duplicates
-              if (prev.some((item) => item.id === (payload.new as TempoItem).id)) {
+              if (prev.some((item) => item.id === newItem.id)) {
                 return prev;
               }
-              return normalizeOrder([...prev, payload.new as TempoItem]);
+              return normalizeOrder([...prev, newItem]);
             });
           } else if (payload.eventType === 'UPDATE') {
             setTempoItems((prev) =>
               normalizeOrder(
                 prev.map((item) =>
-                  item.id === (payload.new as TempoItem).id
-                    ? (payload.new as TempoItem)
-                    : item
+                  item.id === newItem.id ? newItem : item
                 )
               )
             );
           } else if (payload.eventType === 'DELETE') {
             setTempoItems((prev) =>
-              normalizeOrder(prev.filter((item) => item.id !== (payload.old as { id: string }).id))
+              normalizeOrder(prev.filter((item) => item.id !== oldItem.id))
             );
           }
+          
           setLastSyncTime(new Date());
         }
       )
@@ -203,29 +215,39 @@ export function useSession(sessionId: string | undefined) {
           filter: `session_id=eq.${sessionId}`,
         },
         (payload) => {
+          const newPerson = payload.new as Person;
+          const oldPerson = payload.old as { id?: string };
+          
           if (payload.eventType === 'INSERT') {
             setPeople((prev) => {
-              if (prev.some((p) => p.id === (payload.new as Person).id)) {
+              if (prev.some((p) => p.id === newPerson.id)) {
                 return prev;
               }
-              return [...prev, payload.new as Person];
+              return [...prev, newPerson];
             });
           } else if (payload.eventType === 'UPDATE') {
             setPeople((prev) =>
-              prev.map((p) => (p.id === (payload.new as Person).id ? (payload.new as Person) : p))
+              prev.map((p) => (p.id === newPerson.id ? newPerson : p))
             );
           } else if (payload.eventType === 'DELETE') {
-            setPeople((prev) => prev.filter((p) => p.id !== (payload.old as { id: string }).id));
+            setPeople((prev) => prev.filter((p) => p.id !== oldPerson.id));
           }
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           setIsSyncing(false);
-        } else if (status === 'CHANNEL_ERROR') {
+          console.log('[Realtime] Connected to session:', sessionId);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           setIsSyncing(true);
-          // Try to reconnect after a delay
+          console.warn('[Realtime] Connection issue, reconnecting...');
+          // Reconnect after delay
           setTimeout(() => {
+            if (channelRef.current) {
+              supabase.removeChannel(channelRef.current);
+              channelRef.current = null;
+            }
+            // Re-fetch to get latest state
             fetchData();
           }, 2000);
         }
@@ -235,11 +257,12 @@ export function useSession(sessionId: string | undefined) {
 
     return () => {
       if (channelRef.current) {
+        console.log('[Realtime] Cleaning up channel');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
-  }, [sessionId, fetchData]);
+  }, [sessionId, fetchData, isPending, clearPending]);
 
   return {
     session,
