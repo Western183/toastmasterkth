@@ -25,16 +25,19 @@ export function useSession(sessionId: string | undefined) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   
-  // Track pending optimistic updates with timestamps for auto-expiry
-  const pendingUpdatesRef = useRef<Map<string, number>>(new Map());
+  // Track pending optimistic updates - VERY short expiry for done status
+  const pendingUpdatesRef = useRef<Map<string, { timestamp: number; field: string }>>(new Map());
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   
-  // Check if an update is still pending (with 2 second expiry)
-  const isPending = useCallback((itemId: string) => {
-    const timestamp = pendingUpdatesRef.current.get(itemId);
-    if (!timestamp) return false;
-    // Expire pending status after 2 seconds
-    if (Date.now() - timestamp > 2000) {
+  // Check if an update is still pending (500ms expiry for done, 2s for others)
+  const isPending = useCallback((itemId: string, field?: string) => {
+    const pending = pendingUpdatesRef.current.get(itemId);
+    if (!pending) return false;
+    
+    // Very short expiry for done status (500ms), longer for other fields
+    const expiryMs = pending.field === 'done' ? 500 : 2000;
+    if (Date.now() - pending.timestamp > expiryMs) {
       pendingUpdatesRef.current.delete(itemId);
       return false;
     }
@@ -91,9 +94,9 @@ export function useSession(sessionId: string | undefined) {
     fetchData();
   }, [fetchData]);
 
-  // Mark an item as pending update (will expire after 2s)
-  const markPending = useCallback((itemId: string) => {
-    pendingUpdatesRef.current.set(itemId, Date.now());
+  // Mark an item as pending update
+  const markPending = useCallback((itemId: string, field: string = 'other') => {
+    pendingUpdatesRef.current.set(itemId, { timestamp: Date.now(), field });
   }, []);
 
   // Clear pending status for an item
@@ -101,16 +104,34 @@ export function useSession(sessionId: string | undefined) {
     pendingUpdatesRef.current.delete(itemId);
   }, []);
 
+  // Broadcast done status change to other clients immediately
+  const broadcastDoneChange = useCallback((itemId: string, done: boolean) => {
+    if (broadcastChannelRef.current) {
+      broadcastChannelRef.current.send({
+        type: 'broadcast',
+        event: 'done_changed',
+        payload: { itemId, done, timestamp: Date.now() },
+      });
+    }
+  }, []);
+
   // Update a single tempo item optimistically
   const optimisticUpdate = useCallback((itemId: string, updates: Partial<TempoItem>) => {
-    markPending(itemId);
+    const field = 'done' in updates ? 'done' : 'other';
+    markPending(itemId, field);
+    
+    // If updating done status, broadcast immediately to other clients
+    if ('done' in updates) {
+      broadcastDoneChange(itemId, updates.done!);
+    }
+    
     setTempoItems((prev) => {
       const updated = prev.map((item) =>
         item.id === itemId ? { ...item, ...updates } : item
       );
       return normalizeOrder(updated);
     });
-  }, [markPending]);
+  }, [markPending, broadcastDoneChange]);
 
   // Revert optimistic update on error
   const revertUpdate = useCallback((itemId: string, original: TempoItem) => {
@@ -125,20 +146,20 @@ export function useSession(sessionId: string | undefined) {
 
   // Optimistic delete
   const optimisticDelete = useCallback((itemId: string) => {
-    markPending(itemId);
+    markPending(itemId, 'delete');
     setTempoItems((prev) => normalizeOrder(prev.filter((item) => item.id !== itemId)));
   }, [markPending]);
 
   // Optimistic add
   const optimisticAdd = useCallback((newItem: TempoItem) => {
-    markPending(newItem.id);
+    markPending(newItem.id, 'add');
     setTempoItems((prev) => normalizeOrder([...prev, newItem]));
   }, [markPending]);
 
   // Optimistic reorder - update multiple items
   const optimisticReorder = useCallback((reorderedItems: TempoItem[]) => {
     // Mark all as pending
-    reorderedItems.forEach((item) => markPending(item.id));
+    reorderedItems.forEach((item) => markPending(item.id, 'order'));
     setTempoItems(normalizeOrder(reorderedItems));
   }, [markPending]);
 
@@ -148,18 +169,46 @@ export function useSession(sessionId: string | undefined) {
     setLastSyncTime(new Date());
   }, [clearPending]);
 
-  // Set up realtime subscription - SIMPLIFIED AND ROBUST
+  // Set up realtime subscription with BROADCAST for instant done-status sync
   useEffect(() => {
     if (!sessionId) return;
 
-    // Clean up existing channel first
+    // Clean up existing channels first
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
+    if (broadcastChannelRef.current) {
+      supabase.removeChannel(broadcastChannelRef.current);
+      broadcastChannelRef.current = null;
+    }
 
+    // BROADCAST channel for instant done-status sync (faster than postgres_changes)
+    const broadcastChannel = supabase
+      .channel(`tempo-broadcast-${sessionId}`)
+      .on('broadcast', { event: 'done_changed' }, (payload) => {
+        const { itemId, done, timestamp } = payload.payload as { itemId: string; done: boolean; timestamp: number };
+        
+        // Skip if this is our own update
+        if (isPending(itemId)) {
+          return;
+        }
+        
+        // Apply the done change immediately
+        setTempoItems((prev) =>
+          prev.map((item) =>
+            item.id === itemId ? { ...item, done } : item
+          )
+        );
+        setLastSyncTime(new Date());
+      })
+      .subscribe();
+    
+    broadcastChannelRef.current = broadcastChannel;
+
+    // Database changes channel (for INSERT, DELETE, and full state sync)
     const channel = supabase
-      .channel(`tempo-sync-${sessionId}-${Date.now()}`)
+      .channel(`tempo-db-${sessionId}`)
       .on(
         'postgres_changes',
         {
@@ -175,7 +224,6 @@ export function useSession(sessionId: string | undefined) {
           
           // Skip if this is a pending optimistic update from THIS device
           if (itemId && isPending(itemId)) {
-            // Clear pending since DB confirmed the change
             clearPending(itemId);
             return;
           }
@@ -190,6 +238,7 @@ export function useSession(sessionId: string | undefined) {
               return normalizeOrder([...prev, newItem]);
             });
           } else if (payload.eventType === 'UPDATE') {
+            // Apply full update from database
             setTempoItems((prev) =>
               normalizeOrder(
                 prev.map((item) =>
@@ -237,17 +286,10 @@ export function useSession(sessionId: string | undefined) {
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           setIsSyncing(false);
-          console.log('[Realtime] Connected to session:', sessionId);
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           setIsSyncing(true);
-          console.warn('[Realtime] Connection issue, reconnecting...');
           // Reconnect after delay
           setTimeout(() => {
-            if (channelRef.current) {
-              supabase.removeChannel(channelRef.current);
-              channelRef.current = null;
-            }
-            // Re-fetch to get latest state
             fetchData();
           }, 2000);
         }
@@ -257,9 +299,12 @@ export function useSession(sessionId: string | undefined) {
 
     return () => {
       if (channelRef.current) {
-        console.log('[Realtime] Cleaning up channel');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
+      }
+      if (broadcastChannelRef.current) {
+        supabase.removeChannel(broadcastChannelRef.current);
+        broadcastChannelRef.current = null;
       }
     };
   }, [sessionId, fetchData, isPending, clearPending]);
