@@ -107,11 +107,18 @@ export function useSession(sessionId: string | undefined) {
   // Broadcast done status change to other clients immediately
   const broadcastDoneChange = useCallback((itemId: string, done: boolean) => {
     if (broadcastChannelRef.current) {
+      console.log('[Broadcast] Sending done_changed:', itemId, done);
       broadcastChannelRef.current.send({
         type: 'broadcast',
         event: 'done_changed',
         payload: { itemId, done, timestamp: Date.now() },
+      }).then(() => {
+        console.log('[Broadcast] Message sent successfully');
+      }).catch((err) => {
+        console.error('[Broadcast] Failed to send:', err);
       });
+    } else {
+      console.warn('[Broadcast] Channel not ready');
     }
   }, []);
 
@@ -185,12 +192,19 @@ export function useSession(sessionId: string | undefined) {
 
     // BROADCAST channel for instant done-status sync (faster than postgres_changes)
     const broadcastChannel = supabase
-      .channel(`tempo-broadcast-${sessionId}`)
+      .channel(`tempo-broadcast-${sessionId}`, {
+        config: {
+          broadcast: { self: false }, // Don't receive our own broadcasts
+        },
+      })
       .on('broadcast', { event: 'done_changed' }, (payload) => {
-        const { itemId, done, timestamp } = payload.payload as { itemId: string; done: boolean; timestamp: number };
+        const { itemId, done } = payload.payload as { itemId: string; done: boolean; timestamp: number };
         
-        // Skip if this is our own update
+        console.log('[Broadcast] Received done_changed:', itemId, done);
+        
+        // Skip if this is our own pending update
         if (isPending(itemId)) {
+          console.log('[Broadcast] Skipping - item is pending locally');
           return;
         }
         
@@ -202,7 +216,9 @@ export function useSession(sessionId: string | undefined) {
         );
         setLastSyncTime(new Date());
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[Broadcast] Channel status:', status);
+      });
     
     broadcastChannelRef.current = broadcastChannel;
 
