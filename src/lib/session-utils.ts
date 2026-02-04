@@ -20,12 +20,13 @@ export function generateEditToken(): string {
 const EDIT_TOKENS_KEY = 'sittning_edit_tokens';
 const MY_SESSIONS_KEY = 'sittning_my_sessions';
 const UNLOCKED_SESSIONS_KEY = 'sittning_unlocked_sessions';
+const SESSION_PINS_KEY = 'sittning_session_pins';
 
 interface EditTokenStore {
   [sessionId: string]: string;
 }
 
-export function saveEditToken(sessionId: string, token: string): void {
+export function saveEditToken(sessionId: string, token: string, pin?: string): void {
   const stored = localStorage.getItem(EDIT_TOKENS_KEY);
   const tokens: EditTokenStore = stored ? JSON.parse(stored) : {};
   tokens[sessionId] = token;
@@ -34,6 +35,30 @@ export function saveEditToken(sessionId: string, token: string): void {
   // Also save to my sessions list and mark as unlocked
   addToMySessions(sessionId);
   unlockSession(sessionId);
+  
+  // Save PIN if provided
+  if (pin) {
+    saveSessionPin(sessionId, pin);
+  }
+}
+
+// PIN storage functions
+interface PinStore {
+  [sessionId: string]: string;
+}
+
+export function saveSessionPin(sessionId: string, pin: string): void {
+  const stored = localStorage.getItem(SESSION_PINS_KEY);
+  const pins: PinStore = stored ? JSON.parse(stored) : {};
+  pins[sessionId] = pin;
+  localStorage.setItem(SESSION_PINS_KEY, JSON.stringify(pins));
+}
+
+export function getSessionPin(sessionId: string): string | null {
+  const stored = localStorage.getItem(SESSION_PINS_KEY);
+  if (!stored) return null;
+  const pins: PinStore = JSON.parse(stored);
+  return pins[sessionId] || null;
 }
 
 export function getEditToken(sessionId: string): string | null {

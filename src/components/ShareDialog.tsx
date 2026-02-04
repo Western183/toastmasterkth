@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Share, Copy, Check, Link2 } from 'lucide-react';
+import { Share, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -12,32 +12,49 @@ import {
 import { toast } from 'sonner';
 
 interface ShareDialogProps {
-  shareCode: string;
-  sessionId: string;
+  sessionPin: string | null;
 }
 
-export function ShareDialog({ shareCode, sessionId }: ShareDialogProps) {
-  const [copied, setCopied] = useState<'code' | 'link' | null>(null);
-  const shareUrl = `${window.location.origin}/join/${shareCode}`;
+const APP_URL = 'https://toastmasterkth.lovable.app/';
 
-  const copyToClipboard = async (text: string, type: 'code' | 'link') => {
+export function ShareDialog({ sessionPin }: ShareDialogProps) {
+  const [copied, setCopied] = useState<'link' | 'pin' | 'both' | null>(null);
+
+  const copyToClipboard = async (text: string, type: 'link' | 'pin' | 'both') => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(type);
-      toast.success(type === 'code' ? 'Kod kopierad!' : 'Länk kopierad!');
+      const messages = {
+        link: 'Länk kopierad!',
+        pin: 'PIN kopierad!',
+        both: 'Länk och PIN kopierade!',
+      };
+      toast.success(messages[type]);
       setTimeout(() => setCopied(null), 2000);
     } catch {
       toast.error('Kunde inte kopiera');
     }
   };
 
+  const handleCopyBoth = async () => {
+    if (!sessionPin) {
+      copyToClipboard(APP_URL, 'link');
+      return;
+    }
+    const text = `Öppna appen: ${APP_URL}\nPIN-kod: ${sessionPin}`;
+    copyToClipboard(text, 'both');
+  };
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
+        const text = sessionPin 
+          ? `Öppna appen och ange PIN-kod: ${sessionPin}`
+          : 'Öppna appen';
         await navigator.share({
           title: 'Sittningsschema',
-          text: `Öppna sittningen med kod: ${shareCode}`,
-          url: shareUrl,
+          text,
+          url: APP_URL,
         });
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
@@ -45,7 +62,7 @@ export function ShareDialog({ shareCode, sessionId }: ShareDialogProps) {
         }
       }
     } else {
-      copyToClipboard(shareUrl, 'link');
+      handleCopyBoth();
     }
   };
 
@@ -63,26 +80,26 @@ export function ShareDialog({ shareCode, sessionId }: ShareDialogProps) {
             <h2>Dela sittningen</h2>
           </DialogTitle>
           <DialogDescription>
-            Dela koden eller länken med andra sångledare
+            Dela länken och PIN-koden med andra sångledare
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Share code */}
+          {/* App link */}
           <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">Delningskod</p>
+            <p className="text-sm font-medium text-muted-foreground">Öppna appen:</p>
             <div className="flex items-center gap-2">
-              <div className="flex-1 rounded-lg bg-muted px-4 py-3 text-center">
-                <span className="font-mono text-2xl font-bold tracking-widest">
-                  {shareCode}
-                </span>
+              <div className="flex-1 overflow-hidden rounded-lg bg-muted px-4 py-3">
+                <p className="truncate text-sm font-mono">
+                  toastmasterkth.lovable.app
+                </p>
               </div>
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => copyToClipboard(shareCode, 'code')}
+                onClick={() => copyToClipboard(APP_URL, 'link')}
               >
-                {copied === 'code' ? (
+                {copied === 'link' ? (
                   <Check className="h-4 w-4 text-success" />
                 ) : (
                   <Copy className="h-4 w-4" />
@@ -91,28 +108,43 @@ export function ShareDialog({ shareCode, sessionId }: ShareDialogProps) {
             </div>
           </div>
 
-          {/* Share link */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">Delningslänk</p>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 overflow-hidden rounded-lg bg-muted px-4 py-3">
-                <p className="truncate text-sm font-mono text-muted-foreground">
-                  {shareUrl}
-                </p>
+          {/* PIN code */}
+          {sessionPin && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Ange PIN-kod:</p>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 rounded-lg bg-muted px-4 py-3 text-center">
+                  <span className="font-mono text-2xl font-bold tracking-[0.5em]">
+                    {sessionPin}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => copyToClipboard(sessionPin, 'pin')}
+                >
+                  {copied === 'pin' ? (
+                    <Check className="h-4 w-4 text-success" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => copyToClipboard(shareUrl, 'link')}
-              >
-                {copied === 'link' ? (
-                  <Check className="h-4 w-4 text-success" />
-                ) : (
-                  <Link2 className="h-4 w-4" />
-                )}
-              </Button>
             </div>
-          </div>
+          )}
+
+          {!sessionPin && (
+            <div className="rounded-lg border border-dashed border-muted-foreground/30 p-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                PIN-koden kunde inte hämtas. Sessionen kan delas via länken ovan.
+              </p>
+            </div>
+          )}
+
+          <Button onClick={handleCopyBoth} className="w-full" variant="secondary">
+            <Copy className="mr-2 h-4 w-4" />
+            {copied === 'both' ? 'Kopierat!' : 'Kopiera länk + PIN'}
+          </Button>
 
           <Button onClick={handleShare} className="w-full">
             <Share className="mr-2 h-4 w-4" />

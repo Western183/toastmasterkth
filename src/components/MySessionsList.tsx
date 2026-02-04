@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronRight, Calendar, Lock, LockOpen } from 'lucide-react';
 import { getAllSessionsPublic, verifySessionPin, PublicSession } from '@/lib/secure-api';
-import { getEditToken, isSessionUnlocked, unlockSession, saveEditToken } from '@/lib/session-utils';
+import { getEditToken, isSessionUnlocked, unlockSession, saveEditToken, saveSessionPin } from '@/lib/session-utils';
 import { format } from 'date-fns';
 import { sv } from 'date-fns/locale';
 import { PinDialog } from '@/components/PinDialog';
@@ -52,11 +52,12 @@ export function MySessionsList() {
       const result = await verifySessionPin(pinDialogSession.id, pin);
 
       if (result.valid) {
-        // Correct PIN - save edit token and unlock
+        // Correct PIN - save edit token, PIN, and unlock
         if (result.editToken) {
-          saveEditToken(pinDialogSession.id, result.editToken);
+          saveEditToken(pinDialogSession.id, result.editToken, pin);
         } else {
           unlockSession(pinDialogSession.id);
+          saveSessionPin(pinDialogSession.id, pin);
         }
         navigate(`/session/${pinDialogSession.id}`);
         setPinDialogSession(null);

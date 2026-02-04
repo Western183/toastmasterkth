@@ -34,7 +34,7 @@ import { ShareDialog } from '@/components/ShareDialog';
 import { DeleteSessionDialog } from '@/components/DeleteSessionDialog';
 import { SyncStatus } from '@/components/SyncStatus';
 import { useSession } from '@/hooks/useSession';
-import { getEditToken, isSessionUnlocked } from '@/lib/session-utils';
+import { getEditToken, isSessionUnlocked, getSessionPin } from '@/lib/session-utils';
 import {
   updateTempoDone,
   createTempoItemWithToken,
@@ -352,7 +352,7 @@ export default function SessionView() {
             </div>
           </div>
 
-          <ShareDialog shareCode={session.share_code} sessionId={session.id} />
+          <ShareDialog sessionPin={getSessionPin(session.id)} />
 
           {canEdit && (
             <Button
