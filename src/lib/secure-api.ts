@@ -107,12 +107,10 @@ export async function createSession(
     created_at: new Date().toISOString(),
   };
 
-  let firstPersonId: string | null = null;
-
   // Insert people using RPC
   if (people.length > 0) {
     for (const p of people) {
-      const { data: personId, error: personError } = await supabase.rpc('add_person_with_token', {
+      const { error: personError } = await supabase.rpc('add_person_with_token', {
         p_session_id: session.id,
         p_edit_token: editToken,
         p_name: p.name,
@@ -120,25 +118,21 @@ export async function createSession(
       });
 
       if (personError) throw personError;
-
-      if (!firstPersonId && personId) {
-        firstPersonId = personId;
-      }
     }
   }
 
-  // Create default tempo items using RPC
+  // Create default tempo items using RPC — no person pre-assigned
   const defaultTempos = [
-    { order_index: 1, title: 'Porthos visa', page: '52', note: 'Välkomna', person_id: firstPersonId },
-    { order_index: 2, title: 'Theodor', page: '76', note: 'Presentera förätt + spec', person_id: firstPersonId },
-    { order_index: 3, title: 'Sång', page: null, note: null, person_id: firstPersonId },
-    { order_index: 4, title: 'Sång', page: null, note: 'Presentera Huvudrätt + Spec', person_id: firstPersonId },
-    { order_index: 5, title: 'Sång', page: null, note: null, person_id: firstPersonId },
-    { order_index: 6, title: 'Sång', page: null, note: 'Efterätt + spec', person_id: firstPersonId },
-    { order_index: 7, title: 'Punchen kommer', page: '80', note: null, person_id: firstPersonId },
-    { order_index: 8, title: 'Sång', page: null, note: null, person_id: firstPersonId },
-    { order_index: 9, title: 'Sista punschen', page: '88', note: null, person_id: firstPersonId },
-    { order_index: 10, title: 'En liten blå förgätmigej', page: '90', note: 'Tacka personalen', person_id: firstPersonId },
+    { order_index: 1, title: 'Porthos visa', page: '52', note: 'Välkomna', person_id: null },
+    { order_index: 2, title: 'Theodor', page: '76', note: 'Presentera förätt + spec', person_id: null },
+    { order_index: 3, title: 'Sång', page: null, note: null, person_id: null },
+    { order_index: 4, title: 'Sång', page: null, note: 'Presentera Huvudrätt + Spec', person_id: null },
+    { order_index: 5, title: 'Sång', page: null, note: null, person_id: null },
+    { order_index: 6, title: 'Sång', page: null, note: 'Efterätt + spec', person_id: null },
+    { order_index: 7, title: 'Punchen kommer', page: '80', note: null, person_id: null },
+    { order_index: 8, title: 'Sång', page: null, note: null, person_id: null },
+    { order_index: 9, title: 'Sista punschen', page: '88', note: null, person_id: null },
+    { order_index: 10, title: 'En liten blå förgätmigej', page: '90', note: 'Tacka personalen', person_id: null },
   ];
 
   for (const t of defaultTempos) {
