@@ -32,7 +32,7 @@ export const JoinSessionForm = forwardRef<HTMLFormElement>(
           toast.error('Ingen sittning hittades med den koden');
         }
       } catch (error) {
-        console.error('Error finding session:', error);
+        if (import.meta.env.DEV) console.error('Error finding session:', error);
         toast.error('Kunde inte hitta sittningen');
       } finally {
         setLoading(false);

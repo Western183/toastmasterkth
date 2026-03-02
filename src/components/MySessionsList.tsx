@@ -22,7 +22,7 @@ export function MySessionsList() {
         const data = await getAllSessionsPublic();
         setSessions(data);
       } catch (error) {
-        console.error('Error loading sessions:', error);
+        if (import.meta.env.DEV) console.error('Error loading sessions:', error);
       } finally {
         setLoading(false);
       }
@@ -66,7 +66,7 @@ export function MySessionsList() {
         setPinError(true);
       }
     } catch (error) {
-      console.error('Error verifying PIN:', error);
+      if (import.meta.env.DEV) console.error('Error verifying PIN:', error);
       setPinError(true);
     } finally {
       setVerifying(false);
