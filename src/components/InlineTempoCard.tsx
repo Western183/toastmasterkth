@@ -16,6 +16,7 @@ interface InlineTempoCardProps {
   onUpdate: (id: string, updates: Partial<TempoItem>) => void;
   onDelete?: (id: string) => void;
   isDragTarget?: boolean;
+  isAnyDragging?: boolean;
 }
 
 export function InlineTempoCard({
@@ -26,6 +27,7 @@ export function InlineTempoCard({
   onUpdate,
   onDelete,
   isDragTarget = false,
+  isAnyDragging = false,
 }: InlineTempoCardProps) {
   const person = people.find((p) => p.id === item.person_id);
   const personColor = person ? getPersonColor(person.color) : null;
@@ -51,17 +53,27 @@ export function InlineTempoCard({
     setLocalPersonId(item.person_id || '');
   }, [item.id]); // Only reset when item ID changes, not on every prop update
 
-  // Debounced save function
+  // Debounced save function - blocked during drag
   const debouncedSave = useCallback((updates: Partial<TempoItem>) => {
+    if (isAnyDragging) return; // Block saves during drag
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
     saveTimeoutRef.current = setTimeout(() => {
-      onUpdate(item.id, updates);
+      if (!isAnyDragging) { // Double-check before firing
+        onUpdate(item.id, updates);
+      }
     }, 300);
-  }, [item.id, onUpdate]);
+  }, [item.id, onUpdate, isAnyDragging]);
 
-  // Cleanup on unmount
+  // Cancel pending saves when drag starts or on unmount
+  useEffect(() => {
+    if (isAnyDragging && saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+  }, [isAnyDragging]);
+
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
