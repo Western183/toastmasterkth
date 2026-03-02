@@ -48,7 +48,7 @@ export function DeleteSessionDialog({ sessionId, sessionName }: DeleteSessionDia
         toast.error('Kunde inte ta bort sittningen - ogiltig behörighet');
       }
     } catch (error) {
-      console.error('Error deleting session:', error);
+      if (import.meta.env.DEV) console.error('Error deleting session:', error);
       toast.error('Kunde inte ta bort sittningen');
     } finally {
       setLoading(false);

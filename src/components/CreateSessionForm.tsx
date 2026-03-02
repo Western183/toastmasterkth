@@ -75,7 +75,7 @@ export function CreateSessionForm() {
       toast.success('Sittning skapad!');
       navigate(`/session/${session.id}`);
     } catch (error) {
-      console.error('Error creating session:', error);
+      if (import.meta.env.DEV) console.error('Error creating session:', error);
       toast.error('Kunde inte skapa sittningen');
     } finally {
       setLoading(false);
