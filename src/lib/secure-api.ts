@@ -121,18 +121,28 @@ export async function createSession(
     }
   }
 
-  // Create default tempo items using RPC — no person pre-assigned
+  // Create default tempo items using RPC — no person pre-assigned (20 items)
   const defaultTempos = [
     { order_index: 1, title: 'Porthos visa', page: '52', note: 'Välkomna', person_id: null },
     { order_index: 2, title: 'Theodor', page: '76', note: 'Presentera förätt + spec', person_id: null },
     { order_index: 3, title: 'Sång', page: null, note: null, person_id: null },
-    { order_index: 4, title: 'Sång', page: null, note: 'Presentera Huvudrätt + Spec', person_id: null },
+    { order_index: 4, title: 'Sång', page: null, note: null, person_id: null },
     { order_index: 5, title: 'Sång', page: null, note: null, person_id: null },
-    { order_index: 6, title: 'Sång', page: null, note: 'Efterätt + spec', person_id: null },
-    { order_index: 7, title: 'Punchen kommer', page: '80', note: null, person_id: null },
+    { order_index: 6, title: 'Sång', page: null, note: 'Presentera Huvudrätt + Spec', person_id: null },
+    { order_index: 7, title: 'Sång', page: null, note: null, person_id: null },
     { order_index: 8, title: 'Sång', page: null, note: null, person_id: null },
-    { order_index: 9, title: 'Sista punschen', page: '88', note: null, person_id: null },
-    { order_index: 10, title: 'En liten blå förgätmigej', page: '90', note: 'Tacka personalen', person_id: null },
+    { order_index: 9, title: 'Sång', page: null, note: null, person_id: null },
+    { order_index: 10, title: 'Sång', page: null, note: null, person_id: null },
+    { order_index: 11, title: 'Sång', page: null, note: 'Efterätt + spec', person_id: null },
+    { order_index: 12, title: 'Sång', page: null, note: null, person_id: null },
+    { order_index: 13, title: 'Sång', page: null, note: null, person_id: null },
+    { order_index: 14, title: 'Sång', page: null, note: null, person_id: null },
+    { order_index: 15, title: 'Punchen kommer', page: '80', note: null, person_id: null },
+    { order_index: 16, title: 'Punschsång', page: null, note: null, person_id: null },
+    { order_index: 17, title: 'Sista punschen', page: '88', note: null, person_id: null },
+    { order_index: 18, title: 'En liten blå förgätmigej', page: '90', note: 'Tacka personalen', person_id: null },
+    { order_index: 19, title: 'Sång', page: null, note: null, person_id: null },
+    { order_index: 20, title: 'Sång', page: null, note: null, person_id: null },
   ];
 
   for (const t of defaultTempos) {
@@ -216,20 +226,30 @@ export async function createTempoItemWithToken(
   return data as string | null;
 }
 
+// Sentinel values to signal "clear to NULL" in the SQL function
+const NIL_UUID = '00000000-0000-0000-0000-000000000000';
+
 export async function updateTempoItemWithToken(
   itemId: string,
   editToken: string,
   updates: Partial<Omit<TempoItem, 'id' | 'session_id' | 'created_at' | 'updated_at'>>
 ): Promise<boolean> {
+  // Convert null values to sentinels so the SQL function knows to clear them
+  const p_page = 'page' in updates ? (updates.page === null ? '' : updates.page) : null;
+  const p_note = 'note' in updates ? (updates.note === null ? '' : updates.note) : null;
+  const p_video_count = 'video_count' in updates ? (updates.video_count === null ? -1 : updates.video_count) : null;
+  const p_live_count = 'live_count' in updates ? (updates.live_count === null ? -1 : updates.live_count) : null;
+  const p_person_id = 'person_id' in updates ? (updates.person_id === null ? NIL_UUID : updates.person_id) : null;
+
   const { data, error } = await supabase.rpc('update_tempo_item_with_token', {
     p_item_id: itemId,
     p_edit_token: editToken,
     p_title: updates.title ?? null,
-    p_page: updates.page ?? null,
-    p_note: updates.note ?? null,
-    p_video_count: updates.video_count ?? null,
-    p_live_count: updates.live_count ?? null,
-    p_person_id: updates.person_id ?? null,
+    p_page: p_page,
+    p_note: p_note,
+    p_video_count: p_video_count,
+    p_live_count: p_live_count,
+    p_person_id: p_person_id,
     p_order_index: updates.order_index ?? null,
     p_done: updates.done ?? null,
   });

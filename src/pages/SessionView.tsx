@@ -449,6 +449,7 @@ export default function SessionView() {
                           onUpdate={handleInlineUpdate}
                           onDelete={handleDeleteItem}
                           isDragTarget={activeId !== null && activeId !== item.id}
+                          isAnyDragging={activeId !== null}
                         />
 
                         {showDropAfter && (
