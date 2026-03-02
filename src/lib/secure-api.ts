@@ -141,8 +141,6 @@ export async function createSession(
     { order_index: 16, title: 'Punschsång', page: null, note: null, person_id: null },
     { order_index: 17, title: 'Sista punschen', page: '88', note: null, person_id: null },
     { order_index: 18, title: 'En liten blå förgätmigej', page: '90', note: 'Tacka personalen', person_id: null },
-    { order_index: 19, title: 'Sång', page: null, note: null, person_id: null },
-    { order_index: 20, title: 'Sång', page: null, note: null, person_id: null },
   ];
 
   for (const t of defaultTempos) {
