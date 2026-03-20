@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Session, Person, TempoItem } from '@/types/session';
-import { generateShareCode, generateEditToken, saveEditToken, saveSessionPin } from '@/lib/session-utils';
+import { generateShareCode, generateEditToken, saveEditToken } from '@/lib/session-utils';
 
 // Types for public session (without sensitive fields)
 export interface PublicSession {
