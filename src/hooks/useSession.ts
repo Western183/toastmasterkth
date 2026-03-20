@@ -171,9 +171,7 @@ export function useSession(sessionId: string | undefined) {
     setLastSyncTime(new Date());
   }, [clearPending]);
 
-  // Set up broadcast channel for instant done-status sync + polling for other changes
-  // NOTE: postgres_changes removed to prevent unauthorized realtime data exposure.
-  // Data syncs via polling through secure RPCs instead.
+  // Set up realtime subscription with BROADCAST for instant done-status sync
   useEffect(() => {
     if (!sessionId) return;
 
@@ -190,7 +188,7 @@ export function useSession(sessionId: string | undefined) {
 
     setIsSyncing(true);
 
-    // Broadcast-only channel for instant done-status sync between clients.
+    // Single channel with BOTH broadcast + postgres_changes.
     // Using ack:true makes send() reject when not SUBSCRIBED (avoids silent drops).
     const channel = supabase
       .channel(`tempo-${sessionId}`, {
@@ -207,6 +205,80 @@ export function useSession(sessionId: string | undefined) {
         setTempoItems((prev) => prev.map((item) => (item.id === itemId ? { ...item, done } : item)));
         setLastSyncTime(new Date());
       })
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tempo_items',
+          filter: `session_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          const newItem = payload.new as TempoItem;
+          const oldItem = payload.old as { id?: string };
+          const itemId = newItem?.id || oldItem?.id;
+          
+          // Skip if this is a pending optimistic update from THIS device
+          if (itemId && isPending(itemId)) {
+            clearPending(itemId);
+            return;
+          }
+
+          // Handle different event types
+          if (payload.eventType === 'INSERT') {
+            setTempoItems((prev) => {
+              // Avoid duplicates
+              if (prev.some((item) => item.id === newItem.id)) {
+                return prev;
+              }
+              return normalizeOrder([...prev, newItem]);
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            // Apply full update from database
+            setTempoItems((prev) =>
+              normalizeOrder(
+                prev.map((item) =>
+                  item.id === newItem.id ? newItem : item
+                )
+              )
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setTempoItems((prev) =>
+              normalizeOrder(prev.filter((item) => item.id !== oldItem.id))
+            );
+          }
+          
+          setLastSyncTime(new Date());
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'people',
+          filter: `session_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          const newPerson = payload.new as Person;
+          const oldPerson = payload.old as { id?: string };
+          
+          if (payload.eventType === 'INSERT') {
+            setPeople((prev) => {
+              if (prev.some((p) => p.id === newPerson.id)) {
+                return prev;
+              }
+              return [...prev, newPerson];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            setPeople((prev) =>
+              prev.map((p) => (p.id === newPerson.id ? newPerson : p))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setPeople((prev) => prev.filter((p) => p.id !== oldPerson.id));
+          }
+        }
+      )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           setIsSyncing(false);
@@ -225,11 +297,6 @@ export function useSession(sessionId: string | undefined) {
 
     channelRef.current = channel;
 
-    // Poll for data changes via secure RPCs every 5 seconds
-    const pollInterval = window.setInterval(() => {
-      fetchData();
-    }, 5000);
-
     return () => {
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
@@ -239,9 +306,8 @@ export function useSession(sessionId: string | undefined) {
         window.clearTimeout(retryTimerRef.current);
         retryTimerRef.current = null;
       }
-      window.clearInterval(pollInterval);
     };
-  }, [sessionId, fetchData, isPending, realtimeRetry]);
+  }, [sessionId, fetchData, isPending, clearPending, realtimeRetry]);
 
   return {
     session,
