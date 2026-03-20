@@ -20,52 +20,61 @@ export function generateEditToken(): string {
 const EDIT_TOKENS_KEY = 'sittning_edit_tokens';
 const MY_SESSIONS_KEY = 'sittning_my_sessions';
 const UNLOCKED_SESSIONS_KEY = 'sittning_unlocked_sessions';
-const SESSION_PINS_KEY = 'sittning_session_pins';
 
-interface EditTokenStore {
-  [sessionId: string]: string;
+// Token expiry: 7 days
+const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+interface TokenEntry {
+  token: string;
+  expiresAt: number;
 }
 
-export function saveEditToken(sessionId: string, token: string, pin?: string): void {
+interface EditTokenStore {
+  [sessionId: string]: TokenEntry | string; // string for legacy format migration
+}
+
+function isTokenEntry(value: TokenEntry | string): value is TokenEntry {
+  return typeof value === 'object' && value !== null && 'token' in value && 'expiresAt' in value;
+}
+
+export function saveEditToken(sessionId: string, token: string): void {
   const stored = localStorage.getItem(EDIT_TOKENS_KEY);
   const tokens: EditTokenStore = stored ? JSON.parse(stored) : {};
-  tokens[sessionId] = token;
+  tokens[sessionId] = {
+    token,
+    expiresAt: Date.now() + TOKEN_TTL_MS,
+  };
   localStorage.setItem(EDIT_TOKENS_KEY, JSON.stringify(tokens));
   
   // Also save to my sessions list and mark as unlocked
   addToMySessions(sessionId);
   unlockSession(sessionId);
-  
-  // Save PIN if provided
-  if (pin) {
-    saveSessionPin(sessionId, pin);
-  }
-}
-
-// PIN storage functions
-interface PinStore {
-  [sessionId: string]: string;
-}
-
-export function saveSessionPin(sessionId: string, pin: string): void {
-  const stored = localStorage.getItem(SESSION_PINS_KEY);
-  const pins: PinStore = stored ? JSON.parse(stored) : {};
-  pins[sessionId] = pin;
-  localStorage.setItem(SESSION_PINS_KEY, JSON.stringify(pins));
-}
-
-export function getSessionPin(sessionId: string): string | null {
-  const stored = localStorage.getItem(SESSION_PINS_KEY);
-  if (!stored) return null;
-  const pins: PinStore = JSON.parse(stored);
-  return pins[sessionId] || null;
 }
 
 export function getEditToken(sessionId: string): string | null {
   const stored = localStorage.getItem(EDIT_TOKENS_KEY);
   if (!stored) return null;
   const tokens: EditTokenStore = JSON.parse(stored);
-  return tokens[sessionId] || null;
+  const entry = tokens[sessionId];
+  if (!entry) return null;
+
+  // Migrate legacy plain-string tokens (give them a fresh TTL)
+  if (typeof entry === 'string') {
+    saveEditToken(sessionId, entry);
+    return entry;
+  }
+
+  if (isTokenEntry(entry)) {
+    if (Date.now() > entry.expiresAt) {
+      // Token expired — remove it
+      delete tokens[sessionId];
+      localStorage.setItem(EDIT_TOKENS_KEY, JSON.stringify(tokens));
+      return null;
+    }
+    return entry.token;
+  }
+
+  return null;
 }
 
 export function hasEditAccess(sessionId: string, actualToken: string): boolean {

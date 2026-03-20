@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Session, Person, TempoItem } from '@/types/session';
-import { generateShareCode, generateEditToken, saveEditToken, saveSessionPin } from '@/lib/session-utils';
+import { generateShareCode, generateEditToken, saveEditToken } from '@/lib/session-utils';
 
 // Types for public session (without sensitive fields)
 export interface PublicSession {
@@ -157,9 +157,8 @@ export async function createSession(
     if (tempoError) throw tempoError;
   }
 
-  // Save edit token and PIN locally (this also adds to my sessions)
-  saveEditToken(session.id, editToken, pinCode);
-  saveSessionPin(session.id, pinCode);
+  // Save edit token locally (this also adds to my sessions)
+  saveEditToken(session.id, editToken);
 
   return session as Session;
 }
