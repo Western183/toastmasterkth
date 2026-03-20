@@ -352,7 +352,7 @@ export default function SessionView() {
             </div>
           </div>
 
-          <ShareDialog sessionPin={getSessionPin(session.id)} />
+          <ShareDialog sessionPin={null} />
 
           {canEdit && (
             <Button

@@ -52,12 +52,11 @@ export function MySessionsList() {
       const result = await verifySessionPin(pinDialogSession.id, pin);
 
       if (result.valid) {
-        // Correct PIN - save edit token, PIN, and unlock
+        // Correct PIN - save edit token and unlock
         if (result.editToken) {
-          saveEditToken(pinDialogSession.id, result.editToken, pin);
+          saveEditToken(pinDialogSession.id, result.editToken);
         } else {
           unlockSession(pinDialogSession.id);
-          saveSessionPin(pinDialogSession.id, pin);
         }
         navigate(`/session/${pinDialogSession.id}`);
         setPinDialogSession(null);

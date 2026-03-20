@@ -157,9 +157,8 @@ export async function createSession(
     if (tempoError) throw tempoError;
   }
 
-  // Save edit token and PIN locally (this also adds to my sessions)
-  saveEditToken(session.id, editToken, pinCode);
-  saveSessionPin(session.id, pinCode);
+  // Save edit token locally (this also adds to my sessions)
+  saveEditToken(session.id, editToken);
 
   return session as Session;
 }
