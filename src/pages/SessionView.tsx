@@ -181,6 +181,7 @@ export default function SessionView() {
       video_count: data.video_count ?? null,
       live_count: data.live_count ?? null,
       person_id: data.person_id ?? null,
+      link: data.link ?? null,
       order_index: tempoItems.length + 1,
       done: false,
       created_at: new Date().toISOString(),
@@ -198,6 +199,7 @@ export default function SessionView() {
         video_count: newItem.video_count,
         live_count: newItem.live_count,
         person_id: newItem.person_id,
+        link: newItem.link,
         order_index: newItem.order_index,
         done: false,
       });

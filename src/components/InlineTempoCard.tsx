@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Check, RotateCcw, GripVertical, Video, Mic, Trash2 } from 'lucide-react';
+import { Check, RotateCcw, GripVertical, Video, Mic, Trash2, Music2 } from 'lucide-react';
 import { TempoItem, Person, getPersonColor, PERSON_COLORS } from '@/types/session';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +39,7 @@ export function InlineTempoCard({
   const [localVideoCount, setLocalVideoCount] = useState(item.video_count?.toString() || '');
   const [localLiveCount, setLocalLiveCount] = useState(item.live_count?.toString() || '');
   const [localPersonId, setLocalPersonId] = useState(item.person_id || '');
+  const [localLink, setLocalLink] = useState(item.link || '');
 
   // Debounce refs
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -51,6 +52,7 @@ export function InlineTempoCard({
     setLocalVideoCount(item.video_count?.toString() || '');
     setLocalLiveCount(item.live_count?.toString() || '');
     setLocalPersonId(item.person_id || '');
+    setLocalLink(item.link || '');
   }, [item.id]); // Only reset when item ID changes, not on every prop update
 
   // Debounced save function - blocked during drag
@@ -97,6 +99,11 @@ export function InlineTempoCard({
   const handleNoteChange = (value: string) => {
     setLocalNote(value);
     debouncedSave({ note: value.trim() || null });
+  };
+
+  const handleLinkChange = (value: string) => {
+    setLocalLink(value);
+    debouncedSave({ link: value.trim() || null });
   };
 
   const handleVideoCountChange = (value: string) => {
@@ -212,6 +219,17 @@ export function InlineTempoCard({
                 className="h-8 text-sm"
               />
 
+              {/* Link row */}
+              <div className="flex items-center gap-1">
+                <Music2 className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                <Input
+                  value={localLink}
+                  onChange={(e) => handleLinkChange(e.target.value)}
+                  placeholder="Låtlänk (Spotify)..."
+                  className="h-8 text-sm"
+                />
+              </div>
+
               {/* Counts row */}
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
@@ -316,6 +334,18 @@ export function InlineTempoCard({
                     <Mic className="h-3.5 w-3.5" />
                     <span>{item.live_count}</span>
                   </div>
+                )}
+
+                {item.link && (
+                  <a
+                    href={item.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    <Music2 className="h-3.5 w-3.5" />
+                    <span>Lyssna</span>
+                  </a>
                 )}
 
                 {personColor && person && (

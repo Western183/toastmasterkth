@@ -20,6 +20,7 @@ export interface TempoItem {
   video_count: number | null;
   live_count: number | null;
   person_id: string | null;
+  link: string | null;
   done: boolean;
   created_at: string;
   updated_at: string;
@@ -31,8 +32,16 @@ export interface Session {
   share_code: string;
   edit_token: string;
   pin_code: string | null;
+  template_type: SessionTemplate;
   created_at: string;
 }
+
+export type SessionTemplate = 'regular' | 'bludder';
+
+export const SESSION_TEMPLATES: { id: SessionTemplate; name: string; description: string }[] = [
+  { id: 'regular', name: 'Vanlig sittning', description: 'Standardschema' },
+  { id: 'bludder', name: 'Bluddersittning', description: 'Med PHÖPO och Sexmästeriet' },
+];
 
 export interface SessionWithData extends Session {
   people: Person[];

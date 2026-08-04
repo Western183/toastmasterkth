@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Session, Person, TempoItem } from '@/types/session';
+import { Session, Person, TempoItem, SessionTemplate } from '@/types/session';
 import { generateShareCode, generateEditToken, saveEditToken } from '@/lib/session-utils';
 
 // Types for public session (without sensitive fields)
@@ -9,6 +9,7 @@ export interface PublicSession {
   share_code: string;
   created_at: string;
   has_pin?: boolean;
+  template_type?: SessionTemplate;
 }
 
 // =====================================================
@@ -81,7 +82,8 @@ export async function verifyEditToken(sessionId: string, editToken: string): Pro
 export async function createSession(
   name: string,
   people: { name: string; color: string }[],
-  pinCode: string
+  pinCode: string,
+  templateType: SessionTemplate = 'regular'
 ): Promise<Session> {
   const shareCode = generateShareCode();
   const editToken = generateEditToken();
@@ -92,6 +94,7 @@ export async function createSession(
     p_share_code: shareCode,
     p_edit_token: editToken,
     p_pin_code: pinCode,
+    p_template_type: templateType,
   });
 
   if (error) throw error;
@@ -104,6 +107,7 @@ export async function createSession(
     share_code: shareCode,
     edit_token: editToken,
     pin_code: pinCode,
+    template_type: templateType,
     created_at: new Date().toISOString(),
   };
 
@@ -121,27 +125,8 @@ export async function createSession(
     }
   }
 
-  // Create default tempo items using RPC — no person pre-assigned (20 items)
-  const defaultTempos = [
-    { order_index: 1, title: 'Porthos visa', page: '52', note: 'Välkomna', person_id: null },
-    { order_index: 2, title: 'Theodor', page: '76', note: 'Presentera förätt + spec', person_id: null },
-    { order_index: 3, title: 'Sång', page: null, note: null, person_id: null },
-    { order_index: 4, title: 'Sång', page: null, note: null, person_id: null },
-    { order_index: 5, title: 'Sång', page: null, note: null, person_id: null },
-    { order_index: 6, title: 'Sång', page: null, note: null, person_id: null },
-    { order_index: 7, title: 'Sång', page: null, note: 'Presentera Huvudrätt + Spec', person_id: null },
-    { order_index: 8, title: 'Sång', page: null, note: null, person_id: null },
-    { order_index: 9, title: 'Sång', page: null, note: null, person_id: null },
-    { order_index: 10, title: 'Sång', page: null, note: null, person_id: null },
-    { order_index: 11, title: 'Sång', page: null, note: null, person_id: null },
-    { order_index: 12, title: 'Sång', page: null, note: 'Efterätt + spec', person_id: null },
-    { order_index: 13, title: 'Sång', page: null, note: null, person_id: null },
-    { order_index: 14, title: 'Sång', page: null, note: null, person_id: null },
-    { order_index: 15, title: 'Punchen kommer', page: '80', note: null, person_id: null },
-    { order_index: 16, title: 'Punschsång', page: null, note: null, person_id: null },
-    { order_index: 17, title: 'Sista punschen', page: '88', note: null, person_id: null },
-    { order_index: 18, title: 'En liten blå förgätmigej', page: '90', note: 'Tacka personalen', person_id: null },
-  ];
+  // Create default tempo items using RPC — no person pre-assigned
+  const defaultTempos = getTemplateTempos(templateType);
 
   for (const t of defaultTempos) {
     const { error: tempoError } = await supabase.rpc('create_tempo_item_with_token', {
@@ -152,6 +137,7 @@ export async function createSession(
       p_page: t.page,
       p_note: t.note,
       p_person_id: t.person_id,
+      p_link: t.link ?? null,
     });
 
     if (tempoError) throw tempoError;
@@ -161,6 +147,72 @@ export async function createSession(
   saveEditToken(session.id, editToken);
 
   return session as Session;
+}
+
+// =====================================================
+// TEMPLATES
+// =====================================================
+
+interface TemplateTempo {
+  order_index: number;
+  title: string;
+  page: string | null;
+  note: string | null;
+  person_id: string | null;
+  link?: string | null;
+}
+
+const PHOPO_LINK = 'https://open.spotify.com/track/0uzioJOXr8vqADpxTFY9Hg?si=ddc8b1b72bc143d8';
+const SEXMASTERIET_LINK =
+  'https://open.spotify.com/track/2uvLpXs8bZAjee0l3KNnhx?si=8wJsq8_nRDGppJwgVu23WA&utm_source=copy-link';
+
+function getTemplateTempos(templateType: SessionTemplate): TemplateTempo[] {
+  const regular: Omit<TemplateTempo, 'order_index'>[] = [
+    { title: 'Porthos visa', page: '52', note: 'Välkomna', person_id: null },
+    { title: 'Theodor', page: '76', note: 'Presentera förätt + spec', person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sång', page: null, note: 'Presentera Huvudrätt + Spec', person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sång', page: null, note: 'Efterätt + spec', person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Punchen kommer', page: '80', note: null, person_id: null },
+    { title: 'Punschsång', page: null, note: null, person_id: null },
+    { title: 'Sista punschen', page: '88', note: null, person_id: null },
+    { title: 'En liten blå förgätmigej', page: '90', note: 'Tacka personalen', person_id: null },
+  ];
+
+  const bludder: Omit<TemplateTempo, 'order_index'>[] = [
+    { title: 'Prothos', page: '52', note: 'Välkomna', person_id: null },
+    { title: 'Theodor', page: '76', note: 'Presentera förätt + spec', person_id: null },
+    { title: 'Gyckel', page: null, note: null, person_id: null },
+    { title: 'PHÖPO', page: null, note: null, person_id: null, link: PHOPO_LINK },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sång', page: null, note: 'Presentera Huvudrätt + Spec', person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sång', page: null, note: 'Efterätt + spec', person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sång', page: null, note: null, person_id: null },
+    { title: 'Sexmästeriet', page: null, note: null, person_id: null, link: SEXMASTERIET_LINK },
+    { title: 'Punchen kommer', page: '80', note: null, person_id: null },
+    { title: 'Punschsång', page: null, note: null, person_id: null },
+    { title: 'Sista punschen', page: '88', note: null, person_id: null },
+    { title: 'En liten blå förgätmigej', page: '90', note: 'Tacka personalen', person_id: null },
+  ];
+
+  const list = templateType === 'bludder' ? bludder : regular;
+  return list.map((t, i) => ({ ...t, order_index: i + 1 }));
 }
 
 export async function deleteSessionWithToken(sessionId: string, editToken: string): Promise<boolean> {
@@ -216,6 +268,7 @@ export async function createTempoItemWithToken(
     p_video_count: item.video_count,
     p_live_count: item.live_count,
     p_person_id: item.person_id,
+    p_link: item.link ?? null,
   });
 
   if (error) throw error;
@@ -237,6 +290,7 @@ export async function updateTempoItemWithToken(
   const p_video_count = 'video_count' in updates ? (updates.video_count === null ? -1 : updates.video_count) : null;
   const p_live_count = 'live_count' in updates ? (updates.live_count === null ? -1 : updates.live_count) : null;
   const p_person_id = 'person_id' in updates ? (updates.person_id === null ? NIL_UUID : updates.person_id) : null;
+  const p_link = 'link' in updates ? (updates.link === null ? '' : updates.link) : null;
 
   const { data, error } = await supabase.rpc('update_tempo_item_with_token', {
     p_item_id: itemId,
@@ -247,6 +301,7 @@ export async function updateTempoItemWithToken(
     p_video_count: p_video_count,
     p_live_count: p_live_count,
     p_person_id: p_person_id,
+    p_link: p_link,
     p_order_index: updates.order_index ?? null,
     p_done: updates.done ?? null,
   });
