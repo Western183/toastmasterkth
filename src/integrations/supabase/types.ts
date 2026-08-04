@@ -83,6 +83,7 @@ export type Database = {
           name: string
           pin_code: string | null
           share_code: string
+          template_type: string
         }
         Insert: {
           created_at?: string
@@ -91,6 +92,7 @@ export type Database = {
           name: string
           pin_code?: string | null
           share_code: string
+          template_type?: string
         }
         Update: {
           created_at?: string
@@ -99,6 +101,7 @@ export type Database = {
           name?: string
           pin_code?: string | null
           share_code?: string
+          template_type?: string
         }
         Relationships: []
       }
@@ -107,6 +110,7 @@ export type Database = {
           created_at: string
           done: boolean
           id: string
+          link: string | null
           live_count: number | null
           note: string | null
           order_index: number
@@ -121,6 +125,7 @@ export type Database = {
           created_at?: string
           done?: boolean
           id?: string
+          link?: string | null
           live_count?: number | null
           note?: string | null
           order_index: number
@@ -135,6 +140,7 @@ export type Database = {
           created_at?: string
           done?: boolean
           id?: string
+          link?: string | null
           live_count?: number | null
           note?: string | null
           order_index?: number
@@ -183,12 +189,14 @@ export type Database = {
           p_name: string
           p_pin_code: string
           p_share_code: string
+          p_template_type?: string
         }
         Returns: string
       }
       create_tempo_item_with_token: {
         Args: {
           p_edit_token: string
+          p_link?: string
           p_live_count?: number
           p_note?: string
           p_order_index: number
@@ -220,6 +228,7 @@ export type Database = {
           id: string
           name: string
           share_code: string
+          template_type: string
         }[]
       }
       get_people_for_session: {
@@ -240,6 +249,7 @@ export type Database = {
           id: string
           name: string
           share_code: string
+          template_type: string
         }[]
       }
       get_tempo_items_for_session: {
@@ -248,6 +258,7 @@ export type Database = {
           created_at: string
           done: boolean
           id: string
+          link: string
           live_count: number
           note: string
           order_index: number
@@ -268,6 +279,7 @@ export type Database = {
           p_done?: boolean
           p_edit_token: string
           p_item_id: string
+          p_link?: string
           p_live_count?: number
           p_note?: string
           p_order_index?: number
