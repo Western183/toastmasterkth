@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { motion } from 'framer-motion';
-import { Check, RotateCcw, GripVertical, Video, Mic, Trash2, Pencil } from 'lucide-react';
+import { Check, RotateCcw, GripVertical, Video, Mic, Trash2, Pencil, Music2 } from 'lucide-react';
 import { TempoItem, Person, getPersonColor } from '@/types/session';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -126,6 +126,19 @@ export const TempoCard = forwardRef<HTMLDivElement, TempoCardProps>(
                   <Mic className="h-3.5 w-3.5" />
                   <span>{item.live_count}</span>
                 </div>
+              )}
+
+              {item.link && (
+                <a
+                  href={item.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  <Music2 className="h-3.5 w-3.5" />
+                  <span>Lyssna</span>
+                </a>
               )}
               
               {personColor && person && (
