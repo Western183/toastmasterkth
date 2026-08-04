@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { PERSON_COLORS } from '@/types/session';
+import { PERSON_COLORS, SESSION_TEMPLATES, SessionTemplate } from '@/types/session';
 import { createSession } from '@/lib/secure-api';
 import { toast } from 'sonner';
 
@@ -20,6 +20,7 @@ export function CreateSessionForm() {
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [pinCode, setPinCode] = useState('');
+  const [template, setTemplate] = useState<SessionTemplate>('regular');
   const [people, setPeople] = useState<PersonInput[]>([
     { id: '1', name: '', color: '1' },
   ]);
@@ -70,7 +71,8 @@ export function CreateSessionForm() {
       const session = await createSession(
         name.trim(),
         validPeople.map((p) => ({ name: p.name.trim(), color: p.color })),
-        pinCode
+        pinCode,
+        template
       );
       toast.success('Sittning skapad!');
       navigate(`/session/${session.id}`);
@@ -102,6 +104,25 @@ export function CreateSessionForm() {
           className="h-12 text-base"
           autoComplete="off"
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-base font-medium">Mall</Label>
+        <div className="grid grid-cols-2 gap-2">
+          {SESSION_TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTemplate(t.id)}
+              className={`rounded-lg border p-3 text-left transition-all ${
+                template === t.id ? 'border-primary bg-primary/10' : 'border-border hover:bg-accent'
+              }`}
+            >
+              <span className="block text-sm font-medium">{t.name}</span>
+              <span className="block text-xs text-muted-foreground">{t.description}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="space-y-2">
