@@ -22,6 +22,7 @@ export function EditTempoModal({ item, people, onSave, onClose, nextOrderIndex =
   const [liveCount, setLiveCount] = useState(item?.live_count?.toString() || '');
   const [personId, setPersonId] = useState(item?.person_id || '');
   const [link, setLink] = useState(item?.link || '');
+  const [videoLink, setVideoLink] = useState(item?.video_link || '');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +36,7 @@ export function EditTempoModal({ item, people, onSave, onClose, nextOrderIndex =
       live_count: liveCount ? parseInt(liveCount) : null,
       person_id: personId || null,
       link: link.trim() || null,
+      video_link: videoLink.trim() || null,
       order_index: item?.order_index ?? nextOrderIndex,
       done: item?.done ?? false,
     });
@@ -136,6 +138,17 @@ export function EditTempoModal({ item, people, onSave, onClose, nextOrderIndex =
                 value={link}
                 onChange={(e) => setLink(e.target.value)}
                 placeholder="https://open.spotify.com/track/..."
+                className="h-12"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="video-link">Videolänk (YouTube, Vimeo, Drive)</Label>
+              <Input
+                id="video-link"
+                value={videoLink}
+                onChange={(e) => setVideoLink(e.target.value)}
+                placeholder="https://www.youtube.com/watch?v=..."
                 className="h-12"
               />
             </div>

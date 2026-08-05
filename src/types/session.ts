@@ -21,6 +21,7 @@ export interface TempoItem {
   live_count: number | null;
   person_id: string | null;
   link: string | null;
+  video_link: string | null;
   done: boolean;
   created_at: string;
   updated_at: string;
