@@ -252,6 +252,17 @@ export type Database = {
           template_type: string
         }[]
       }
+      get_session_public: {
+        Args: { p_session_id: string }
+        Returns: {
+          created_at: string
+          has_pin: boolean
+          id: string
+          name: string
+          share_code: string
+          template_type: string
+        }[]
+      }
       get_tempo_items_for_session: {
         Args: { p_session_id: string }
         Returns: {
@@ -297,16 +308,6 @@ export type Database = {
       verify_edit_token: {
         Args: { p_edit_token: string; p_session_id: string }
         Returns: boolean
-      }
-      verify_session_pin: {
-        Args: { p_pin_code: string; p_session_id: string }
-        Returns: {
-          created_at: string
-          id: string
-          name: string
-          pin_is_valid: boolean
-          share_code: string
-        }[]
       }
       verify_session_pin_with_token: {
         Args: { p_pin_code: string; p_session_id: string }
