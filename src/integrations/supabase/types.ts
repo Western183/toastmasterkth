@@ -120,6 +120,7 @@ export type Database = {
           title: string
           updated_at: string
           video_count: number | null
+          video_link: string | null
         }
         Insert: {
           created_at?: string
@@ -135,6 +136,7 @@ export type Database = {
           title: string
           updated_at?: string
           video_count?: number | null
+          video_link?: string | null
         }
         Update: {
           created_at?: string
@@ -150,6 +152,7 @@ export type Database = {
           title?: string
           updated_at?: string
           video_count?: number | null
+          video_link?: string | null
         }
         Relationships: [
           {
@@ -193,21 +196,38 @@ export type Database = {
         }
         Returns: string
       }
-      create_tempo_item_with_token: {
-        Args: {
-          p_edit_token: string
-          p_link?: string
-          p_live_count?: number
-          p_note?: string
-          p_order_index: number
-          p_page?: string
-          p_person_id?: string
-          p_session_id: string
-          p_title: string
-          p_video_count?: number
-        }
-        Returns: string
-      }
+      create_tempo_item_with_token:
+        | {
+            Args: {
+              p_edit_token: string
+              p_link?: string
+              p_live_count?: number
+              p_note?: string
+              p_order_index: number
+              p_page?: string
+              p_person_id?: string
+              p_session_id: string
+              p_title: string
+              p_video_count?: number
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_edit_token: string
+              p_link?: string
+              p_live_count?: number
+              p_note?: string
+              p_order_index: number
+              p_page?: string
+              p_person_id?: string
+              p_session_id: string
+              p_title: string
+              p_video_count?: number
+              p_video_link?: string
+            }
+            Returns: string
+          }
       delete_person_with_token: {
         Args: { p_edit_token: string; p_person_id: string }
         Returns: boolean
@@ -279,28 +299,47 @@ export type Database = {
           title: string
           updated_at: string
           video_count: number
+          video_link: string
         }[]
       }
       update_tempo_done: {
         Args: { p_done: boolean; p_edit_token: string; p_item_id: string }
         Returns: boolean
       }
-      update_tempo_item_with_token: {
-        Args: {
-          p_done?: boolean
-          p_edit_token: string
-          p_item_id: string
-          p_link?: string
-          p_live_count?: number
-          p_note?: string
-          p_order_index?: number
-          p_page?: string
-          p_person_id?: string
-          p_title?: string
-          p_video_count?: number
-        }
-        Returns: boolean
-      }
+      update_tempo_item_with_token:
+        | {
+            Args: {
+              p_done?: boolean
+              p_edit_token: string
+              p_item_id: string
+              p_link?: string
+              p_live_count?: number
+              p_note?: string
+              p_order_index?: number
+              p_page?: string
+              p_person_id?: string
+              p_title?: string
+              p_video_count?: number
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              p_done?: boolean
+              p_edit_token: string
+              p_item_id: string
+              p_link?: string
+              p_live_count?: number
+              p_note?: string
+              p_order_index?: number
+              p_page?: string
+              p_person_id?: string
+              p_title?: string
+              p_video_count?: number
+              p_video_link?: string
+            }
+            Returns: boolean
+          }
       update_tempo_order_with_token: {
         Args: { p_edit_token: string; p_items: Json; p_session_id: string }
         Returns: boolean
