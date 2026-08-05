@@ -269,6 +269,7 @@ export async function createTempoItemWithToken(
     p_live_count: item.live_count,
     p_person_id: item.person_id,
     p_link: item.link ?? null,
+    p_video_link: item.video_link ?? null,
   });
 
   if (error) throw error;
@@ -291,6 +292,7 @@ export async function updateTempoItemWithToken(
   const p_live_count = 'live_count' in updates ? (updates.live_count === null ? -1 : updates.live_count) : null;
   const p_person_id = 'person_id' in updates ? (updates.person_id === null ? NIL_UUID : updates.person_id) : null;
   const p_link = 'link' in updates ? (updates.link === null ? '' : updates.link) : null;
+  const p_video_link = 'video_link' in updates ? (updates.video_link === null ? '' : updates.video_link) : null;
 
   const { data, error } = await supabase.rpc('update_tempo_item_with_token', {
     p_item_id: itemId,
@@ -302,6 +304,7 @@ export async function updateTempoItemWithToken(
     p_live_count: p_live_count,
     p_person_id: p_person_id,
     p_link: p_link,
+    p_video_link: p_video_link,
     p_order_index: updates.order_index ?? null,
     p_done: updates.done ?? null,
   });

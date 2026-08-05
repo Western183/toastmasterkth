@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Check, RotateCcw, GripVertical, Video, Mic, Trash2, Music2 } from 'lucide-react';
+import { Check, RotateCcw, GripVertical, Video, Mic, Trash2, Music2, PlayCircle } from 'lucide-react';
 import { TempoItem, Person, getPersonColor, PERSON_COLORS } from '@/types/session';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,7 @@ export function InlineTempoCard({
   const [localLiveCount, setLocalLiveCount] = useState(item.live_count?.toString() || '');
   const [localPersonId, setLocalPersonId] = useState(item.person_id || '');
   const [localLink, setLocalLink] = useState(item.link || '');
+  const [localVideoLink, setLocalVideoLink] = useState(item.video_link || '');
 
   // Debounce refs
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -53,6 +54,7 @@ export function InlineTempoCard({
     setLocalLiveCount(item.live_count?.toString() || '');
     setLocalPersonId(item.person_id || '');
     setLocalLink(item.link || '');
+    setLocalVideoLink(item.video_link || '');
   }, [item.id]); // Only reset when item ID changes, not on every prop update
 
   // Debounced save function - blocked during drag
@@ -104,6 +106,11 @@ export function InlineTempoCard({
   const handleLinkChange = (value: string) => {
     setLocalLink(value);
     debouncedSave({ link: value.trim() || null });
+  };
+
+  const handleVideoLinkChange = (value: string) => {
+    setLocalVideoLink(value);
+    debouncedSave({ video_link: value.trim() || null });
   };
 
   const handleVideoCountChange = (value: string) => {
@@ -230,6 +237,17 @@ export function InlineTempoCard({
                 />
               </div>
 
+              {/* Video link row */}
+              <div className="flex items-center gap-1">
+                <PlayCircle className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                <Input
+                  value={localVideoLink}
+                  onChange={(e) => handleVideoLinkChange(e.target.value)}
+                  placeholder="Videolänk (YouTube, Vimeo, Drive)..."
+                  className="h-8 text-sm"
+                />
+              </div>
+
               {/* Counts row */}
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
@@ -345,6 +363,18 @@ export function InlineTempoCard({
                   >
                     <Music2 className="h-3.5 w-3.5" />
                     <span>Lyssna</span>
+                  </a>
+                )}
+
+                {item.video_link && (
+                  <a
+                    href={item.video_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    <PlayCircle className="h-3.5 w-3.5" />
+                    <span>Öppna video</span>
                   </a>
                 )}
 

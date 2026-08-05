@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { motion } from 'framer-motion';
-import { Check, RotateCcw, GripVertical, Video, Mic, Trash2, Pencil, Music2 } from 'lucide-react';
+import { Check, RotateCcw, GripVertical, Video, Mic, Trash2, Pencil, Music2, PlayCircle } from 'lucide-react';
 import { TempoItem, Person, getPersonColor } from '@/types/session';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -138,6 +138,19 @@ export const TempoCard = forwardRef<HTMLDivElement, TempoCardProps>(
                 >
                   <Music2 className="h-3.5 w-3.5" />
                   <span>Lyssna</span>
+                </a>
+              )}
+
+              {item.video_link && (
+                <a
+                  href={item.video_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  <PlayCircle className="h-3.5 w-3.5" />
+                  <span>Öppna video</span>
                 </a>
               )}
               

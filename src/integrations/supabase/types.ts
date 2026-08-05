@@ -120,6 +120,7 @@ export type Database = {
           title: string
           updated_at: string
           video_count: number | null
+          video_link: string | null
         }
         Insert: {
           created_at?: string
@@ -135,6 +136,7 @@ export type Database = {
           title: string
           updated_at?: string
           video_count?: number | null
+          video_link?: string | null
         }
         Update: {
           created_at?: string
@@ -150,6 +152,7 @@ export type Database = {
           title?: string
           updated_at?: string
           video_count?: number | null
+          video_link?: string | null
         }
         Relationships: [
           {
@@ -205,6 +208,7 @@ export type Database = {
           p_session_id: string
           p_title: string
           p_video_count?: number
+          p_video_link?: string
         }
         Returns: string
       }
@@ -279,6 +283,7 @@ export type Database = {
           title: string
           updated_at: string
           video_count: number
+          video_link: string
         }[]
       }
       update_tempo_done: {
@@ -298,6 +303,7 @@ export type Database = {
           p_person_id?: string
           p_title?: string
           p_video_count?: number
+          p_video_link?: string
         }
         Returns: boolean
       }
