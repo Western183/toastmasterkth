@@ -1,0 +1,2 @@
+DROP FUNCTION IF EXISTS public.create_tempo_item_with_token(uuid,text,integer,text,text,text,integer,integer,uuid,text);
+DROP FUNCTION IF EXISTS public.update_tempo_item_with_token(uuid,text,text,text,text,integer,integer,uuid,integer,boolean,text);
