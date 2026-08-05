@@ -54,10 +54,9 @@ export function useSession(sessionId: string | undefined) {
     try {
       setLoading(true);
       
-      // Get session info via RPC (doesn't expose sensitive fields)
-      const { data: sessionData, error: sessionError } = await supabase.rpc('verify_session_pin', {
+      // Get public session info via RPC (never exposes pin_code or edit_token)
+      const { data: sessionData, error: sessionError } = await supabase.rpc('get_session_public', {
         p_session_id: sessionId,
-        p_pin_code: '', // Empty PIN just to get session info
       });
 
       if (sessionError) throw sessionError;
