@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Check, RotateCcw, GripVertical, Video, Mic, Trash2, Music2 } from 'lucide-react';
+import { Check, RotateCcw, GripVertical, Video, Mic, Trash2, Music2, PlayCircle } from 'lucide-react';
 import { TempoItem, Person, getPersonColor, PERSON_COLORS } from '@/types/session';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
