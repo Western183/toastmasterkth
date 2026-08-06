@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { openLinkInNewTab } from '@/lib/link-utils';
 
 interface TempoCardProps {
   item: TempoItem;
@@ -133,7 +134,14 @@ export const TempoCard = forwardRef<HTMLDivElement, TempoCardProps>(
                   href={item.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    openLinkInNewTab(item.link!);
+                  }}
                   className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                 >
                   <Music2 className="h-3.5 w-3.5" />
@@ -146,7 +154,14 @@ export const TempoCard = forwardRef<HTMLDivElement, TempoCardProps>(
                   href={item.video_link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    openLinkInNewTab(item.video_link!);
+                  }}
                   className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                 >
                   <PlayCircle className="h-3.5 w-3.5" />
