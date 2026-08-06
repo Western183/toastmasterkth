@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TempoItem, Person, PERSON_COLORS } from '@/types/session';
+import { normalizeLink } from '@/lib/link-utils';
 
 interface EditTempoModalProps {
   item?: TempoItem | null;
@@ -35,8 +36,8 @@ export function EditTempoModal({ item, people, onSave, onClose, nextOrderIndex =
       video_count: videoCount ? parseInt(videoCount) : null,
       live_count: liveCount ? parseInt(liveCount) : null,
       person_id: personId || null,
-      link: link.trim() || null,
-      video_link: videoLink.trim() || null,
+      link: normalizeLink(link),
+      video_link: normalizeLink(videoLink),
       order_index: item?.order_index ?? nextOrderIndex,
       done: item?.done ?? false,
     });
