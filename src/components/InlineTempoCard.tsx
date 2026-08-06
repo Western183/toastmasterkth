@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { normalizeLink, openLinkInNewTab } from '@/lib/link-utils';
 
 interface InlineTempoCardProps {
   item: TempoItem;
@@ -44,6 +45,11 @@ export function InlineTempoCard({
 
   // Debounce refs
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingUpdatesRef = useRef<Partial<TempoItem>>({});
+  const onUpdateRef = useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
+  const itemIdRef = useRef(item.id);
+  itemIdRef.current = item.id;
 
   // Sync local state when item changes from server
   useEffect(() => {
@@ -60,15 +66,34 @@ export function InlineTempoCard({
   // Debounced save function - blocked during drag
   const debouncedSave = useCallback((updates: Partial<TempoItem>) => {
     if (isAnyDragging) return; // Block saves during drag
+    pendingUpdatesRef.current = { ...pendingUpdatesRef.current, ...updates };
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
     saveTimeoutRef.current = setTimeout(() => {
+      saveTimeoutRef.current = null;
       if (!isAnyDragging) { // Double-check before firing
-        onUpdate(item.id, updates);
+        const pending = pendingUpdatesRef.current;
+        pendingUpdatesRef.current = {};
+        if (Object.keys(pending).length > 0) {
+          onUpdateRef.current(itemIdRef.current, pending);
+        }
       }
     }, 300);
-  }, [item.id, onUpdate, isAnyDragging]);
+  }, [isAnyDragging]);
+
+  // Send any pending edit immediately (used on blur and on unmount so nothing is lost)
+  const flushSave = useCallback(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    const pending = pendingUpdatesRef.current;
+    pendingUpdatesRef.current = {};
+    if (Object.keys(pending).length > 0) {
+      onUpdateRef.current(itemIdRef.current, pending);
+    }
+  }, []);
 
   // Cancel pending saves when drag starts or on unmount
   useEffect(() => {
@@ -80,11 +105,9 @@ export function InlineTempoCard({
 
   useEffect(() => {
     return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
+      flushSave();
     };
-  }, []);
+  }, [flushSave]);
 
   const handleTitleChange = (value: string) => {
     setLocalTitle(value);
@@ -105,12 +128,12 @@ export function InlineTempoCard({
 
   const handleLinkChange = (value: string) => {
     setLocalLink(value);
-    debouncedSave({ link: value.trim() || null });
+    debouncedSave({ link: normalizeLink(value) });
   };
 
   const handleVideoLinkChange = (value: string) => {
     setLocalVideoLink(value);
-    debouncedSave({ video_link: value.trim() || null });
+    debouncedSave({ video_link: normalizeLink(value) });
   };
 
   const handleVideoCountChange = (value: string) => {
