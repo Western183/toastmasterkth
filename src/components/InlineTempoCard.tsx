@@ -255,6 +255,11 @@ export function InlineTempoCard({
                 <Input
                   value={localLink}
                   onChange={(e) => handleLinkChange(e.target.value)}
+                  onBlur={() => {
+                    const normalized = normalizeLink(localLink);
+                    setLocalLink(normalized ?? '');
+                    flushSave();
+                  }}
                   placeholder="Låtlänk (Spotify)..."
                   className="h-8 text-sm"
                 />
@@ -266,6 +271,11 @@ export function InlineTempoCard({
                 <Input
                   value={localVideoLink}
                   onChange={(e) => handleVideoLinkChange(e.target.value)}
+                  onBlur={() => {
+                    const normalized = normalizeLink(localVideoLink);
+                    setLocalVideoLink(normalized ?? '');
+                    flushSave();
+                  }}
                   placeholder="Videolänk (YouTube, Vimeo, Drive)..."
                   className="h-8 text-sm"
                 />
@@ -382,6 +392,14 @@ export function InlineTempoCard({
                     href={item.link}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      openLinkInNewTab(item.link!);
+                    }}
                     className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                   >
                     <Music2 className="h-3.5 w-3.5" />
@@ -394,6 +412,14 @@ export function InlineTempoCard({
                     href={item.video_link}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      openLinkInNewTab(item.video_link!);
+                    }}
                     className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                   >
                     <PlayCircle className="h-3.5 w-3.5" />
