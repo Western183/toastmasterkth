@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TempoItem, Person, PERSON_COLORS } from '@/types/session';
-import { normalizeLink } from '@/lib/link-utils';
+import { normalizeLink, isValidWebLink, LINK_ERROR } from '@/lib/link-utils';
 
 interface EditTempoModalProps {
   item?: TempoItem | null;
@@ -28,6 +28,7 @@ export function EditTempoModal({ item, people, onSave, onClose, nextOrderIndex =
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+    if (!isValidWebLink(link) || !isValidWebLink(videoLink)) return;
 
     onSave({
       title: title.trim(),
@@ -133,25 +134,37 @@ export function EditTempoModal({ item, people, onSave, onClose, nextOrderIndex =
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="link">Låtlänk (Spotify)</Label>
+              <Label htmlFor="link">Låtlänk</Label>
               <Input
                 id="link"
                 value={link}
                 onChange={(e) => setLink(e.target.value)}
-                placeholder="https://open.spotify.com/track/..."
+                placeholder="Klistra in en Spotify-länk"
                 className="h-12"
+                aria-invalid={!isValidWebLink(link)}
               />
+              {!isValidWebLink(link) ? (
+                <p className="text-xs text-destructive">{LINK_ERROR}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Öppnar den valda låten i en ny flik.</p>
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="video-link">Videolänk (YouTube, Vimeo, Drive)</Label>
+              <Label htmlFor="video-link">Videolänk</Label>
               <Input
                 id="video-link"
                 value={videoLink}
                 onChange={(e) => setVideoLink(e.target.value)}
-                placeholder="https://www.youtube.com/watch?v=..."
+                placeholder="Klistra in en YouTube-, Vimeo- eller annan videolänk"
                 className="h-12"
+                aria-invalid={!isValidWebLink(videoLink)}
               />
+              {!isValidWebLink(videoLink) ? (
+                <p className="text-xs text-destructive">{LINK_ERROR}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Öppnar den specifika gyckelvideon i en ny flik.</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -194,7 +207,11 @@ export function EditTempoModal({ item, people, onSave, onClose, nextOrderIndex =
               <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
                 Avbryt
               </Button>
-              <Button type="submit" className="flex-1" disabled={!title.trim()}>
+              <Button
+                type="submit"
+                className="flex-1"
+                disabled={!title.trim() || !isValidWebLink(link) || !isValidWebLink(videoLink)}
+              >
                 {item ? 'Spara' : 'Lägg till'}
               </Button>
             </div>
