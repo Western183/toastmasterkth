@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Check, RotateCcw, GripVertical, Video, Mic, Trash2, Music2, PlayCircle } from 'lucide-react';
+import { MediaLinkButtons } from '@/components/MediaLinkButtons';
 import { TempoItem, Person, getPersonColor, PERSON_COLORS } from '@/types/session';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { normalizeLink, openLinkInNewTab } from '@/lib/link-utils';
+import { normalizeLink, isValidWebLink, LINK_ERROR } from '@/lib/link-utils';
 
 interface InlineTempoCardProps {
   item: TempoItem;
@@ -250,35 +251,51 @@ export function InlineTempoCard({
               />
 
               {/* Link row */}
-              <div className="flex items-center gap-1">
-                <Music2 className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                <Input
-                  value={localLink}
-                  onChange={(e) => handleLinkChange(e.target.value)}
-                  onBlur={() => {
-                    const normalized = normalizeLink(localLink);
-                    setLocalLink(normalized ?? '');
-                    flushSave();
-                  }}
-                  placeholder="Låtlänk (Spotify)..."
-                  className="h-8 text-sm"
-                />
+              <div className="space-y-1">
+                <div className="flex items-center gap-1">
+                  <Music2 className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                  <Input
+                    aria-label="Låtlänk"
+                    value={localLink}
+                    onChange={(e) => handleLinkChange(e.target.value)}
+                    onBlur={() => {
+                      const normalized = normalizeLink(localLink);
+                      setLocalLink(normalized ?? '');
+                      flushSave();
+                    }}
+                    placeholder="Klistra in en Spotify-länk"
+                    className="h-8 text-sm"
+                  />
+                </div>
+                {!isValidWebLink(localLink) ? (
+                  <p className="text-xs text-destructive">{LINK_ERROR}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Öppnar låten i en ny flik.</p>
+                )}
               </div>
 
               {/* Video link row */}
-              <div className="flex items-center gap-1">
-                <PlayCircle className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                <Input
-                  value={localVideoLink}
-                  onChange={(e) => handleVideoLinkChange(e.target.value)}
-                  onBlur={() => {
-                    const normalized = normalizeLink(localVideoLink);
-                    setLocalVideoLink(normalized ?? '');
-                    flushSave();
-                  }}
-                  placeholder="Videolänk (YouTube, Vimeo, Drive)..."
-                  className="h-8 text-sm"
-                />
+              <div className="space-y-1">
+                <div className="flex items-center gap-1">
+                  <PlayCircle className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                  <Input
+                    aria-label="Videolänk"
+                    value={localVideoLink}
+                    onChange={(e) => handleVideoLinkChange(e.target.value)}
+                    onBlur={() => {
+                      const normalized = normalizeLink(localVideoLink);
+                      setLocalVideoLink(normalized ?? '');
+                      flushSave();
+                    }}
+                    placeholder="Klistra in en YouTube-, Vimeo- eller annan videolänk"
+                    className="h-8 text-sm"
+                  />
+                </div>
+                {!isValidWebLink(localVideoLink) ? (
+                  <p className="text-xs text-destructive">{LINK_ERROR}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Öppnar gyckelvideon i en ny flik.</p>
+                )}
               </div>
 
               {/* Counts row */}
@@ -387,46 +404,6 @@ export function InlineTempoCard({
                   </div>
                 )}
 
-                {item.link && (
-                  <a
-                    href={item.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      openLinkInNewTab(item.link!);
-                    }}
-                    className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                  >
-                    <Music2 className="h-3.5 w-3.5" />
-                    <span>Lyssna</span>
-                  </a>
-                )}
-
-                {item.video_link && (
-                  <a
-                    href={item.video_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      openLinkInNewTab(item.video_link!);
-                    }}
-                    className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                  >
-                    <PlayCircle className="h-3.5 w-3.5" />
-                    <span>Öppna video</span>
-                  </a>
-                )}
-
                 {personColor && person && (
                   <div className="flex items-center gap-1.5">
                     <div
@@ -437,6 +414,8 @@ export function InlineTempoCard({
                   </div>
                 )}
               </div>
+
+              <MediaLinkButtons link={item.link} videoLink={item.video_link} className="mt-2" />
             </>
           )}
         </div>
