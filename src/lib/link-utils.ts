@@ -21,6 +21,21 @@ export function normalizeLink(raw: string | null | undefined): string | null {
 }
 
 /** Open a link in a new tab, working also inside the Lovable preview iframe. */
+export const LINK_ERROR = 'Ange en giltig webblänk som börjar med https://';
+
+/** Empty is always OK (fields are optional). Otherwise it must normalize to a valid http(s) URL. */
+export function isValidWebLink(raw: string | null | undefined): boolean {
+  if (!raw || !raw.trim()) return true;
+  const normalized = normalizeLink(raw);
+  if (!normalized) return false;
+  try {
+    const url = new URL(normalized);
+    return (url.protocol === 'https:' || url.protocol === 'http:') && url.hostname.includes('.');
+  } catch {
+    return false;
+  }
+}
+
 export function openLinkInNewTab(url: string) {
   const target = normalizeLink(url);
   if (!target) return;
