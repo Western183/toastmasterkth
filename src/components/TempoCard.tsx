@@ -1,12 +1,12 @@
 import { forwardRef } from 'react';
 import { motion } from 'framer-motion';
-import { Check, RotateCcw, GripVertical, Video, Mic, Trash2, Pencil, Music2, PlayCircle } from 'lucide-react';
+import { Check, RotateCcw, GripVertical, Video, Mic, Trash2, Pencil } from 'lucide-react';
 import { TempoItem, Person, getPersonColor } from '@/types/session';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { openLinkInNewTab } from '@/lib/link-utils';
+import { MediaLinkButtons } from '@/components/MediaLinkButtons';
 
 interface TempoCardProps {
   item: TempoItem;
@@ -129,46 +129,6 @@ export const TempoCard = forwardRef<HTMLDivElement, TempoCardProps>(
                 </div>
               )}
 
-              {item.link && (
-                <a
-                  href={item.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    openLinkInNewTab(item.link!);
-                  }}
-                  className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                >
-                  <Music2 className="h-3.5 w-3.5" />
-                  <span>Lyssna</span>
-                </a>
-              )}
-
-              {item.video_link && (
-                <a
-                  href={item.video_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    openLinkInNewTab(item.video_link!);
-                  }}
-                  className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                >
-                  <PlayCircle className="h-3.5 w-3.5" />
-                  <span>Öppna video</span>
-                </a>
-              )}
-              
               {personColor && person && (
                 <div className="flex items-center gap-1.5">
                   <div
@@ -179,6 +139,8 @@ export const TempoCard = forwardRef<HTMLDivElement, TempoCardProps>(
                 </div>
               )}
             </div>
+
+            <MediaLinkButtons link={item.link} videoLink={item.video_link} className="mt-2" />
           </div>
 
           {/* Actions */}
