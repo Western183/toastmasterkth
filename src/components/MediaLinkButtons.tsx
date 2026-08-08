@@ -1,6 +1,6 @@
 import { Music2, PlayCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { openLinkInNewTab } from '@/lib/link-utils';
+import { normalizeLink } from '@/lib/link-utils';
 
 interface MediaLinkButtonsProps {
   link?: string | null;
@@ -17,19 +17,15 @@ function stopDrag(e: React.SyntheticEvent) {
 
 /** Compact link section shown on program items. Clicks never reach the drag handler. */
 export function MediaLinkButtons({ link, videoLink, className }: MediaLinkButtonsProps) {
-  if (!link && !videoLink) return null;
-
-  const handleClick = (url: string) => (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    openLinkInNewTab(url);
-  };
+  const songHref = normalizeLink(link);
+  const videoHref = normalizeLink(videoLink);
+  if (!songHref && !videoHref) return null;
 
   return (
     <div className={cn('flex flex-wrap items-center gap-2', className)}>
-      {link && (
+      {songHref && (
         <a
-          href={link}
+          href={songHref}
           target="_blank"
           rel="noopener noreferrer"
           title="Öppnas i en ny flik"
@@ -38,7 +34,7 @@ export function MediaLinkButtons({ link, videoLink, className }: MediaLinkButton
           onMouseDown={stopDrag}
           onTouchStart={stopDrag}
           onKeyDown={stopDrag}
-          onClick={handleClick(link)}
+          onClick={stopDrag}
           className={baseClass}
         >
           <Music2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -46,9 +42,9 @@ export function MediaLinkButtons({ link, videoLink, className }: MediaLinkButton
         </a>
       )}
 
-      {videoLink && (
+      {videoHref && (
         <a
-          href={videoLink}
+          href={videoHref}
           target="_blank"
           rel="noopener noreferrer"
           title="Öppnas i en ny flik"
@@ -57,7 +53,7 @@ export function MediaLinkButtons({ link, videoLink, className }: MediaLinkButton
           onMouseDown={stopDrag}
           onTouchStart={stopDrag}
           onKeyDown={stopDrag}
-          onClick={handleClick(videoLink)}
+          onClick={stopDrag}
           className={baseClass}
         >
           <PlayCircle className="h-3.5 w-3.5" aria-hidden="true" />
