@@ -1,0 +1,1 @@
+delete from public.sessions where id in ('602f61d5-fae3-407d-9df8-d65efd6e245c','3665ab9a-b200-4e2b-9899-31337f1a42c8');

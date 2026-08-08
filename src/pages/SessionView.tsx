@@ -31,7 +31,6 @@ import { Button } from '@/components/ui/button';
 import { InlineTempoCard } from '@/components/InlineTempoCard';
 import { EditTempoModal } from '@/components/EditTempoModal';
 import { ShareDialog } from '@/components/ShareDialog';
-import { DeleteSessionDialog } from '@/components/DeleteSessionDialog';
 import { SyncStatus } from '@/components/SyncStatus';
 import { useSession } from '@/hooks/useSession';
 import { getEditToken, isSessionUnlocked } from '@/lib/session-utils';
@@ -507,13 +506,6 @@ export default function SessionView() {
           </motion.div>
         )}
 
-        {/* Delete section - only visible to creator */}
-        {canEdit && (
-          <div className="mt-8 border-t pt-6">
-            <p className="mb-3 text-sm text-muted-foreground">Farozon</p>
-            <DeleteSessionDialog sessionId={session.id} sessionName={session.name} />
-          </div>
-        )}
       </main>
 
       {/* Add new modal */}
