@@ -35,25 +35,3 @@ export function isValidWebLink(raw: string | null | undefined): boolean {
     return false;
   }
 }
-
-export function openLinkInNewTab(url: string) {
-  const target = normalizeLink(url);
-  if (!target) return;
-  // NOTE: passing 'noopener' makes window.open return null even on success,
-  // which previously triggered the fallback and navigated the current tab away.
-  const win = window.open(target, '_blank');
-  if (!win) {
-    // Popup blocked (e.g. sandboxed iframe) - fall back to top-level navigation
-    try {
-      (window.top ?? window).location.href = target;
-    } catch {
-      window.location.href = target;
-    }
-    return;
-  }
-  try {
-    win.opener = null;
-  } catch {
-    /* cross-origin, nothing to do */
-  }
-}
