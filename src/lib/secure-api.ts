@@ -195,16 +195,7 @@ function getTemplateTempos(templateType: SessionTemplate): TemplateTempo[] {
   return list.map((t, i) => ({ ...t, order_index: i + 1 }));
 }
 
-export async function deleteSessionWithToken(sessionId: string, editToken: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc('delete_session_with_token', {
-    p_session_id: sessionId,
-    p_edit_token: editToken,
-  });
-
-  if (error) throw error;
-
-  return data === true;
-}
+// Deleting sittningar has been removed from the app entirely.
 
 // =====================================================
 // TEMPO ITEM FUNCTIONS (Using secure RPCs)
