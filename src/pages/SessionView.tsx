@@ -33,13 +33,14 @@ import { EditTempoModal } from '@/components/EditTempoModal';
 import { ShareDialog } from '@/components/ShareDialog';
 import { SyncStatus } from '@/components/SyncStatus';
 import { useSession } from '@/hooks/useSession';
-import { getEditToken, isSessionUnlocked } from '@/lib/session-utils';
+import { getEditToken, saveEditToken } from '@/lib/session-utils';
 import {
   updateTempoDone,
   createTempoItemWithToken,
   updateTempoItemWithToken,
   deleteTempoItemWithToken,
   updateTempoOrderWithToken,
+  fetchSessionEditToken,
 } from '@/lib/secure-api';
 import { TempoItem } from '@/types/session';
 import { toast } from 'sonner';
@@ -77,16 +78,32 @@ export default function SessionView() {
   const listRef = useRef<HTMLDivElement>(null);
   const activeItem = activeId ? tempoItems.find((item) => item.id === activeId) : null;
 
-  // User can edit if they have unlocked the session with PIN (or are the creator)
-  const canEdit = session ? isSessionUnlocked(session.id) : false;
+  // PIN codes are removed — everyone who opens a sittning can edit it
+  const canEdit = !!session;
 
-  // Update edit token when session changes
-  useMemo(() => {
-    if (session && canEdit && !editToken) {
-      const storedToken = getEditToken(session.id);
-      if (storedToken) setEditToken(storedToken);
+  // Fetch the edit token for this session (no PIN needed)
+  useEffect(() => {
+    if (!session || editToken) return;
+    const stored = getEditToken(session.id);
+    if (stored) {
+      setEditToken(stored);
+      return;
     }
-  }, [session, canEdit, editToken]);
+    let cancelled = false;
+    fetchSessionEditToken(session.id)
+      .then((token) => {
+        if (!cancelled && token) {
+          saveEditToken(session.id, token);
+          setEditToken(token);
+        }
+      })
+      .catch((err) => {
+        if (import.meta.env.DEV) console.error('Could not fetch edit token:', err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [session, editToken]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
