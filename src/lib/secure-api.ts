@@ -35,34 +35,15 @@ export async function getSessionByShareCode(shareCode: string): Promise<PublicSe
   return data[0] as PublicSession;
 }
 
-export async function verifySessionPin(
-  sessionId: string,
-  pinCode: string
-): Promise<{ valid: boolean; session?: PublicSession; editToken?: string }> {
-  const { data, error } = await supabase.rpc('verify_session_pin_with_token', {
+// PIN codes have been removed — anyone opening a sittning gets edit access.
+export async function fetchSessionEditToken(sessionId: string): Promise<string | null> {
+  const { data, error } = await (supabase.rpc as any)('get_session_edit_token', {
     p_session_id: sessionId,
-    p_pin_code: pinCode,
   });
 
   if (error) throw error;
 
-  if (!data || data.length === 0) {
-    return { valid: false };
-  }
-
-  const result = data[0];
-  return {
-    valid: result.pin_is_valid,
-    session: result.pin_is_valid
-      ? {
-          id: result.id,
-          name: result.name,
-          share_code: result.share_code,
-          created_at: result.created_at,
-        }
-      : undefined,
-    editToken: result.edit_token || undefined,
-  };
+  return (data as string | null) ?? null;
 }
 
 export async function verifyEditToken(sessionId: string, editToken: string): Promise<boolean> {
@@ -82,7 +63,6 @@ export async function verifyEditToken(sessionId: string, editToken: string): Pro
 export async function createSession(
   name: string,
   people: { name: string; color: string }[],
-  pinCode: string,
   templateType: SessionTemplate = 'regular'
 ): Promise<Session> {
   const shareCode = generateShareCode();
@@ -93,7 +73,7 @@ export async function createSession(
     p_name: name,
     p_share_code: shareCode,
     p_edit_token: editToken,
-    p_pin_code: pinCode,
+    p_pin_code: null,
     p_template_type: templateType,
   });
 
@@ -106,7 +86,7 @@ export async function createSession(
     name,
     share_code: shareCode,
     edit_token: editToken,
-    pin_code: pinCode,
+    pin_code: null,
     template_type: templateType,
     created_at: new Date().toISOString(),
   };
@@ -215,16 +195,7 @@ function getTemplateTempos(templateType: SessionTemplate): TemplateTempo[] {
   return list.map((t, i) => ({ ...t, order_index: i + 1 }));
 }
 
-export async function deleteSessionWithToken(sessionId: string, editToken: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc('delete_session_with_token', {
-    p_session_id: sessionId,
-    p_edit_token: editToken,
-  });
-
-  if (error) throw error;
-
-  return data === true;
-}
+// Deleting sittningar has been removed from the app entirely.
 
 // =====================================================
 // TEMPO ITEM FUNCTIONS (Using secure RPCs)

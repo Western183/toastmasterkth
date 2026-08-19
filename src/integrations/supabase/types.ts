@@ -216,10 +216,6 @@ export type Database = {
         Args: { p_edit_token: string; p_person_id: string }
         Returns: boolean
       }
-      delete_session_with_token: {
-        Args: { p_edit_token: string; p_session_id: string }
-        Returns: boolean
-      }
       delete_tempo_item_with_token: {
         Args: { p_edit_token: string; p_item_id: string }
         Returns: boolean
@@ -255,6 +251,10 @@ export type Database = {
           share_code: string
           template_type: string
         }[]
+      }
+      get_session_edit_token: {
+        Args: { p_session_id: string }
+        Returns: string
       }
       get_session_public: {
         Args: { p_session_id: string }
@@ -314,27 +314,6 @@ export type Database = {
       verify_edit_token: {
         Args: { p_edit_token: string; p_session_id: string }
         Returns: boolean
-      }
-      verify_session_pin: {
-        Args: { p_pin_code: string; p_session_id: string }
-        Returns: {
-          created_at: string
-          id: string
-          name: string
-          pin_is_valid: boolean
-          share_code: string
-        }[]
-      }
-      verify_session_pin_with_token: {
-        Args: { p_pin_code: string; p_session_id: string }
-        Returns: {
-          created_at: string
-          edit_token: string
-          id: string
-          name: string
-          pin_is_valid: boolean
-          share_code: string
-        }[]
       }
     }
     Enums: {
