@@ -202,9 +202,11 @@ export default function SessionView() {
         optimisticDelete(tempId);
         return;
       }
-      
-      confirmSync([realId]);
+
+      // Swap the optimistic placeholder for the persisted row (same slot, no duplicate)
+      commitAdd(tempId, { ...newItem, id: realId });
       toast.success('Tempo tillagt');
+
     } catch {
       optimisticDelete(tempId);
       toast.error('Kunde inte skapa');
