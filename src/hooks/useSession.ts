@@ -357,6 +357,8 @@ export function useSession(sessionId: string | undefined) {
     revertUpdate,
     optimisticDelete,
     optimisticAdd,
+    commitAdd,
+
     optimisticReorder,
     confirmSync,
   };
