@@ -35,16 +35,21 @@ export async function getSessionByShareCode(shareCode: string): Promise<PublicSe
   return data[0] as PublicSession;
 }
 
-// PIN codes have been removed — anyone opening a sittning gets edit access.
-export async function fetchSessionEditToken(sessionId: string): Promise<string | null> {
-  const { data, error } = await (supabase.rpc as any)('get_session_edit_token', {
+// PIN verification happens in the database (shared across all devices/browsers).
+// Returns the session's edit token on success, or null when the PIN is wrong.
+export async function verifySessionPin(sessionId: string, pinCode: string): Promise<string | null> {
+  const { data, error } = await (supabase.rpc as any)('verify_session_pin_with_token', {
     p_session_id: sessionId,
+    p_pin_code: pinCode,
   });
 
   if (error) throw error;
 
-  return (data as string | null) ?? null;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || row.success !== true) return null;
+  return (row.edit_token as string | null) ?? null;
 }
+
 
 export async function verifyEditToken(sessionId: string, editToken: string): Promise<boolean> {
   const { data, error } = await supabase.rpc('verify_edit_token', {
