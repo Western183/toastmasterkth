@@ -154,8 +154,32 @@ export function useSession(sessionId: string | undefined) {
   // Optimistic add
   const optimisticAdd = useCallback((newItem: TempoItem) => {
     markPending(newItem.id, 'add');
-    setTempoItems((prev) => normalizeOrder([...prev, newItem]));
+    setTempoItems((prev) => {
+      if (prev.some((item) => item.id === newItem.id)) return prev;
+      return normalizeOrder([...prev, newItem]);
+    });
   }, [markPending]);
+
+  // Replace the temporary optimistic item with the persisted row (same slot, no duplicate)
+  const commitAdd = useCallback((tempId: string, realItem: TempoItem) => {
+    clearPending(tempId);
+    markPending(realItem.id, 'add');
+    setTempoItems((prev) => {
+      const hasReal = prev.some((item) => item.id === realItem.id);
+      const withoutTemp = prev.filter((item) => item.id !== tempId);
+      if (hasReal) {
+        return normalizeOrder(withoutTemp.map((i) => (i.id === realItem.id ? { ...i, ...realItem } : i)));
+      }
+      const hadTemp = prev.length !== withoutTemp.length;
+      if (!hadTemp) return normalizeOrder([...withoutTemp, realItem]);
+      // keep the temp item's position
+      const idx = prev.findIndex((item) => item.id === tempId);
+      const next = [...withoutTemp];
+      next.splice(idx, 0, realItem);
+      return normalizeOrder(next);
+    });
+  }, [clearPending, markPending]);
+
 
   // Optimistic reorder - update multiple items
   const optimisticReorder = useCallback((reorderedItems: TempoItem[]) => {
