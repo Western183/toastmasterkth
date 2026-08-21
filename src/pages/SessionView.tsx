@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { InlineTempoCard } from '@/components/InlineTempoCard';
 import { EditTempoModal } from '@/components/EditTempoModal';
 import { ShareDialog } from '@/components/ShareDialog';
+import { PinGate } from '@/components/PinGate';
 import { SyncStatus } from '@/components/SyncStatus';
 import { useSession } from '@/hooks/useSession';
 import { getEditToken, saveEditToken } from '@/lib/session-utils';
@@ -40,7 +41,6 @@ import {
   updateTempoItemWithToken,
   deleteTempoItemWithToken,
   updateTempoOrderWithToken,
-  fetchSessionEditToken,
 } from '@/lib/secure-api';
 import { TempoItem } from '@/types/session';
 import { toast } from 'sonner';
@@ -78,32 +78,8 @@ export default function SessionView() {
   const listRef = useRef<HTMLDivElement>(null);
   const activeItem = activeId ? tempoItems.find((item) => item.id === activeId) : null;
 
-  // PIN codes are removed — everyone who opens a sittning can edit it
-  const canEdit = !!session;
-
-  // Fetch the edit token for this session (no PIN needed)
-  useEffect(() => {
-    if (!session || editToken) return;
-    const stored = getEditToken(session.id);
-    if (stored) {
-      setEditToken(stored);
-      return;
-    }
-    let cancelled = false;
-    fetchSessionEditToken(session.id)
-      .then((token) => {
-        if (!cancelled && token) {
-          saveEditToken(session.id, token);
-          setEditToken(token);
-        }
-      })
-      .catch((err) => {
-        if (import.meta.env.DEV) console.error('Could not fetch edit token:', err);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [session, editToken]);
+  // Everyone who unlocks the sittning with the PIN can edit it
+  const canEdit = !!session && !!editToken;
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -336,6 +312,20 @@ export default function SessionView() {
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
+    );
+  }
+
+  if (!editToken && session) {
+    return (
+      <PinGate
+        sessionId={session.id}
+        sessionName={session.name}
+        onUnlocked={(token) => {
+          saveEditToken(session.id, token);
+          setEditToken(token);
+        }}
+        onBack={() => navigate('/')}
+      />
     );
   }
 
