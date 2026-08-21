@@ -119,3 +119,41 @@ export function isSessionUnlocked(sessionId: string): boolean {
   const unlocked = getUnlockedSessions();
   return unlocked.includes(sessionId);
 }
+
+// --- Edit access for the current browser session only (PIN-protected editing) ---
+const SESSION_EDIT_TOKENS_KEY = 'sittning_session_edit_tokens';
+
+type SessionTokenStore = Record<string, string>;
+
+function readSessionTokens(): SessionTokenStore {
+  try {
+    const stored = sessionStorage.getItem(SESSION_EDIT_TOKENS_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function saveSessionEditToken(sessionId: string, token: string): void {
+  try {
+    const tokens = readSessionTokens();
+    tokens[sessionId] = token;
+    sessionStorage.setItem(SESSION_EDIT_TOKENS_KEY, JSON.stringify(tokens));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+export function getSessionEditToken(sessionId: string): string | null {
+  return readSessionTokens()[sessionId] ?? null;
+}
+
+export function clearSessionEditToken(sessionId: string): void {
+  try {
+    const tokens = readSessionTokens();
+    delete tokens[sessionId];
+    sessionStorage.setItem(SESSION_EDIT_TOKENS_KEY, JSON.stringify(tokens));
+  } catch {
+    // ignore
+  }
+}

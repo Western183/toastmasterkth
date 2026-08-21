@@ -229,6 +229,18 @@ export async function updateTempoDone(itemId: string, done: boolean, editToken: 
   return data === true;
 }
 
+/** Mark an item as done/not done — allowed for everyone, no PIN required. */
+export async function updateTempoDonePublic(itemId: string, done: boolean): Promise<boolean> {
+  const { data, error } = await (supabase.rpc as any)('update_tempo_done_public', {
+    p_item_id: itemId,
+    p_done: done,
+  });
+
+  if (error) throw error;
+
+  return data === true;
+}
+
 export async function createTempoItemWithToken(
   sessionId: string,
   editToken: string,

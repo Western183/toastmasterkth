@@ -1,6 +1,13 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Lock, Loader2 } from 'lucide-react';
+import { Lock, Loader2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,12 +15,13 @@ import { verifySessionPin } from '@/lib/secure-api';
 
 interface PinGateProps {
   sessionId: string;
-  sessionName?: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onUnlocked: (editToken: string) => void;
-  onBack: () => void;
 }
 
-export function PinGate({ sessionId, sessionName, onUnlocked, onBack }: PinGateProps) {
+/** PIN dialog shown when the user wants to enter edit mode. */
+export function PinGate({ sessionId, open, onOpenChange, onUnlocked }: PinGateProps) {
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -31,7 +39,9 @@ export function PinGate({ sessionId, sessionName, onUnlocked, onBack }: PinGateP
     try {
       const token = await verifySessionPin(sessionId, pin.trim());
       if (token) {
+        setPin('');
         onUnlocked(token);
+        onOpenChange(false);
       } else {
         setErrorMsg('Fel PIN-kod. Försök igen.');
         setPin('');
@@ -44,57 +54,62 @@ export function PinGate({ sessionId, sessionName, onUnlocked, onBack }: PinGateP
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-4 safe-top safe-bottom">
-      <motion.form
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-5 rounded-xl border border-border bg-card p-6"
-      >
-        <div className="flex flex-col items-center gap-2 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) {
+          setPin('');
+          setErrorMsg(null);
+        }
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <Lock className="h-6 w-6 text-primary" />
           </div>
-          <h1 className="text-lg font-semibold">{sessionName || 'Låst sittning'}</h1>
-          <p className="text-sm text-muted-foreground">
-            Ange PIN-koden för att öppna sittningen.
-          </p>
-        </div>
+          <DialogTitle className="text-center">Ange PIN-kod för att redigera</DialogTitle>
+          <DialogDescription className="text-center">
+            Sittningen kan användas fritt – PIN-koden krävs bara för att ändra innehållet.
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="space-y-2">
-          <Label htmlFor="pin" className="text-base font-medium">
-            PIN-kod
-          </Label>
-          <Input
-            id="pin"
-            inputMode="numeric"
-            autoComplete="off"
-            type="password"
-            placeholder="••••"
-            value={pin}
-            onChange={(e) => {
-              setPin(e.target.value.replace(/\D/g, '').slice(0, 8));
-              setErrorMsg(null);
-            }}
-            className="h-14 text-center text-2xl tracking-[0.5em]"
-            autoFocus
-          />
-          {errorMsg && (
-            <p className="text-sm font-medium text-destructive" role="alert">
-              {errorMsg}
-            </p>
-          )}
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="edit-pin">PIN-kod</Label>
+            <Input
+              id="edit-pin"
+              autoFocus
+              inputMode="numeric"
+              autoComplete="off"
+              type="password"
+              value={pin}
+              onChange={(e) => {
+                setPin(e.target.value);
+                setErrorMsg(null);
+              }}
+              placeholder="••••"
+              className="text-center text-lg tracking-widest"
+            />
+            {errorMsg && (
+              <p role="alert" className="text-sm text-destructive">
+                {errorMsg}
+              </p>
+            )}
+          </div>
 
-        <Button type="submit" size="lg" className="w-full" disabled={loading}>
-          {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Öppna sittning'}
-        </Button>
-
-        <Button type="button" variant="ghost" className="w-full" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Till startsidan
-        </Button>
-      </motion.form>
-    </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Avbryt
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Lås upp redigering
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

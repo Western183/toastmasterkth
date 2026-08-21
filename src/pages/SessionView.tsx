@@ -34,9 +34,9 @@ import { ShareDialog } from '@/components/ShareDialog';
 import { PinGate } from '@/components/PinGate';
 import { SyncStatus } from '@/components/SyncStatus';
 import { useSession } from '@/hooks/useSession';
-import { getEditToken, saveEditToken } from '@/lib/session-utils';
+import { getSessionEditToken, saveSessionEditToken } from '@/lib/session-utils';
 import {
-  updateTempoDone,
+  updateTempoDonePublic,
   createTempoItemWithToken,
   updateTempoItemWithToken,
   deleteTempoItemWithToken,
@@ -71,9 +71,10 @@ export default function SessionView() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [editToken, setEditToken] = useState<string | null>(() => {
-    if (id) return getEditToken(id);
+    if (id) return getSessionEditToken(id);
     return null;
   });
+  const [showPinDialog, setShowPinDialog] = useState(false);
 
   const listRef = useRef<HTMLDivElement>(null);
   const activeItem = activeId ? tempoItems.find((item) => item.id === activeId) : null;
@@ -103,11 +104,6 @@ export default function SessionView() {
 
   // Handle toggle done - optimistic update
   const handleToggleDone = useCallback(async (itemId: string, done: boolean) => {
-    if (!editToken) {
-      toast.error('Du har inte behörighet att ändra status');
-      return;
-    }
-
     const original = tempoItems.find((item) => item.id === itemId);
     if (!original) return;
 
@@ -115,7 +111,7 @@ export default function SessionView() {
     optimisticUpdate(itemId, { done });
 
     try {
-      const success = await updateTempoDone(itemId, done, editToken);
+      const success = await updateTempoDonePublic(itemId, done);
       if (success) {
         confirmSync([itemId]);
       } else {
@@ -126,7 +122,7 @@ export default function SessionView() {
       revertUpdate(itemId, original);
       toast.error('Kunde inte uppdatera status');
     }
-  }, [editToken, tempoItems, optimisticUpdate, revertUpdate, confirmSync]);
+  }, [tempoItems, optimisticUpdate, revertUpdate, confirmSync]);
 
   // Handle inline update - debounced save to backend
   const handleInlineUpdate = useCallback(async (itemId: string, updates: Partial<TempoItem>) => {
@@ -315,20 +311,6 @@ export default function SessionView() {
     );
   }
 
-  if (!editToken && session) {
-    return (
-      <PinGate
-        sessionId={session.id}
-        sessionName={session.name}
-        onUnlocked={(token) => {
-          saveEditToken(session.id, token);
-          setEditToken(token);
-        }}
-        onBack={() => navigate('/')}
-      />
-    );
-  }
-
   if (error || !session) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
@@ -364,11 +346,17 @@ export default function SessionView() {
 
           <ShareDialog sessionPin={null} />
 
-          {canEdit && (
+          {(
             <Button
               variant={isEditMode ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setIsEditMode(!isEditMode)}
+              onClick={() => {
+                if (!canEdit) {
+                  setShowPinDialog(true);
+                  return;
+                }
+                setIsEditMode(!isEditMode);
+              }}
             >
               {isEditMode ? (
                 <>
@@ -514,6 +502,20 @@ export default function SessionView() {
         )}
 
       </main>
+
+      {session && (
+        <PinGate
+          sessionId={session.id}
+          open={showPinDialog}
+          onOpenChange={setShowPinDialog}
+          onUnlocked={(token) => {
+            saveSessionEditToken(session.id, token);
+            setEditToken(token);
+            setIsEditMode(true);
+            toast.success('Redigering upplåst');
+          }}
+        />
+      )}
 
       {/* Add new modal */}
       {isAddingNew && (
