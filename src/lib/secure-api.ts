@@ -153,7 +153,7 @@ const SEXMASTERIET_LINK =
 
 function getTemplateTempos(templateType: SessionTemplate): TemplateTempo[] {
   const regular: Omit<TemplateTempo, 'order_index'>[] = [
-    { title: 'Porthos visa', page: '52', note: 'Välkomna', person_id: null },
+    { title: 'Porthos Visa', page: '52', note: 'Välkomna', person_id: null },
     { title: 'Theodor', page: '76', note: 'Presentera förätt + spec', person_id: null },
     { title: 'Sång', page: null, note: null, person_id: null },
     { title: 'Sång', page: null, note: null, person_id: null },
@@ -174,7 +174,7 @@ function getTemplateTempos(templateType: SessionTemplate): TemplateTempo[] {
   ];
 
   const bludder: Omit<TemplateTempo, 'order_index'>[] = [
-    { title: 'Prothos', page: '52', note: 'Välkomna', person_id: null },
+    { title: 'Porthos Visa', page: '52', note: 'Välkomna', person_id: null },
     { title: 'Theodor', page: '76', note: 'Presentera förätt + spec', person_id: null },
     { title: 'Gyckel', page: null, note: null, person_id: null },
     { title: 'PHÖPO', page: null, note: null, person_id: null, link: PHOPO_LINK },
