@@ -252,10 +252,6 @@ export type Database = {
           template_type: string
         }[]
       }
-      get_session_edit_token: {
-        Args: { p_session_id: string }
-        Returns: string
-      }
       get_session_public: {
         Args: { p_session_id: string }
         Returns: {
@@ -314,6 +310,13 @@ export type Database = {
       verify_edit_token: {
         Args: { p_edit_token: string; p_session_id: string }
         Returns: boolean
+      }
+      verify_session_pin_with_token: {
+        Args: { p_pin_code: string; p_session_id: string }
+        Returns: {
+          edit_token: string
+          success: boolean
+        }[]
       }
     }
     Enums: {
