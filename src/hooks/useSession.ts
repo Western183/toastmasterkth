@@ -154,7 +154,10 @@ export function useSession(sessionId: string | undefined) {
   // Optimistic add
   const optimisticAdd = useCallback((newItem: TempoItem) => {
     markPending(newItem.id, 'add');
-    setTempoItems((prev) => normalizeOrder([...prev, newItem]));
+    setTempoItems((prev) => {
+      if (prev.some((item) => item.id === newItem.id)) return prev;
+      return normalizeOrder([...prev, newItem]);
+    });
   }, [markPending]);
 
   // Optimistic reorder - update multiple items
@@ -233,6 +236,7 @@ export function useSession(sessionId: string | undefined) {
               return normalizeOrder([...prev, newItem]);
             });
           } else if (payload.eventType === 'UPDATE') {
+
             // Apply full update from database
             setTempoItems((prev) =>
               normalizeOrder(
@@ -322,6 +326,7 @@ export function useSession(sessionId: string | undefined) {
     revertUpdate,
     optimisticDelete,
     optimisticAdd,
+
     optimisticReorder,
     confirmSync,
   };
