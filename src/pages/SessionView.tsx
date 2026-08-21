@@ -61,6 +61,8 @@ export default function SessionView() {
     revertUpdate,
     optimisticDelete,
     optimisticAdd,
+    commitAdd,
+
     optimisticReorder,
     confirmSync,
   } = useSession(id);
