@@ -254,9 +254,20 @@ export function useSession(sessionId: string | undefined) {
               if (prev.some((item) => item.id === newItem.id)) {
                 return prev;
               }
+              // If this row is the persisted version of a local optimistic item,
+              // replace it in place instead of appending a second card.
+              const tempIdx = prev.findIndex(
+                (item) => item.id.startsWith('temp-') && item.title === newItem.title
+              );
+              if (tempIdx !== -1) {
+                const next = [...prev];
+                next[tempIdx] = newItem;
+                return normalizeOrder(next);
+              }
               return normalizeOrder([...prev, newItem]);
             });
           } else if (payload.eventType === 'UPDATE') {
+
             // Apply full update from database
             setTempoItems((prev) =>
               normalizeOrder(
