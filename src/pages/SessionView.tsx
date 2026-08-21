@@ -153,18 +153,16 @@ export default function SessionView() {
     }
   }, [editToken, id, tempoItems, optimisticUpdate, revertUpdate, confirmSync]);
 
-  // Handle adding new item
+  // Handle adding new item.
+  // We insert the item into local state exactly once, using the id returned by the
+  // database, so there is never a temporary placeholder card alongside the real one.
   const handleAddNewItem = async (data: Partial<TempoItem>) => {
     if (!editToken || !id) {
       toast.error('Du har inte behörighet att redigera');
       return;
     }
 
-    // Create optimistic item with temporary ID
-    const tempId = `temp-${Date.now()}`;
-    const newItem: TempoItem = {
-      id: tempId,
-      session_id: id,
+    const fields = {
       title: data.title!,
       page: data.page ?? null,
       note: data.note ?? null,
@@ -175,43 +173,32 @@ export default function SessionView() {
       video_link: data.video_link ?? null,
       order_index: tempoItems.length + 1,
       done: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     };
 
-    optimisticAdd(newItem);
     setIsAddingNew(false);
 
     try {
-      const realId = await createTempoItemWithToken(id, editToken, {
-        title: newItem.title,
-        page: newItem.page,
-        note: newItem.note,
-        video_count: newItem.video_count,
-        live_count: newItem.live_count,
-        person_id: newItem.person_id,
-        link: newItem.link,
-        video_link: newItem.video_link,
-        order_index: newItem.order_index,
-        done: false,
-      });
+      const realId = await createTempoItemWithToken(id, editToken, fields);
 
       if (!realId) {
         toast.error('Kunde inte skapa - ogiltig token');
-        // Remove the optimistic item
-        optimisticDelete(tempId);
         return;
       }
 
-      // Swap the optimistic placeholder for the persisted row (same slot, no duplicate)
-      commitAdd(tempId, { ...newItem, id: realId });
+      const now = new Date().toISOString();
+      optimisticAdd({
+        ...fields,
+        id: realId,
+        session_id: id,
+        created_at: now,
+        updated_at: now,
+      });
       toast.success('Tempo tillagt');
-
     } catch {
-      optimisticDelete(tempId);
       toast.error('Kunde inte skapa');
     }
   };
+
 
   // Handle delete with optimistic UI and reindex
   const handleDeleteItem = useCallback(async (itemId: string) => {
