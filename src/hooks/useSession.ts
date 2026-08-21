@@ -153,6 +153,7 @@ export function useSession(sessionId: string | undefined) {
 
   // Optimistic add
   const optimisticAdd = useCallback((newItem: TempoItem) => {
+    console.log('DBG optimisticAdd', newItem.id, newItem.title);
     markPending(newItem.id, 'add');
     setTempoItems((prev) => {
       if (prev.some((item) => item.id === newItem.id)) return prev;
@@ -162,6 +163,7 @@ export function useSession(sessionId: string | undefined) {
 
   // Replace the temporary optimistic item with the persisted row (same slot, no duplicate)
   const commitAdd = useCallback((tempId: string, realItem: TempoItem) => {
+    console.log('DBG commitAdd', tempId, realItem.id);
     clearPending(tempId);
     markPending(realItem.id, 'add');
     setTempoItems((prev) => {
@@ -249,6 +251,7 @@ export function useSession(sessionId: string | undefined) {
 
           // Handle different event types
           if (payload.eventType === 'INSERT') {
+            console.log('DBG rt INSERT', newItem.id, newItem.title);
             setTempoItems((prev) => {
               // Avoid duplicates
               if (prev.some((item) => item.id === newItem.id)) {
@@ -298,6 +301,7 @@ export function useSession(sessionId: string | undefined) {
           const oldPerson = payload.old as { id?: string };
           
           if (payload.eventType === 'INSERT') {
+            console.log('DBG rt INSERT', newItem.id, newItem.title);
             setPeople((prev) => {
               if (prev.some((p) => p.id === newPerson.id)) {
                 return prev;
