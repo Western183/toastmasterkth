@@ -301,7 +301,6 @@ export function useSession(sessionId: string | undefined) {
           const oldPerson = payload.old as { id?: string };
           
           if (payload.eventType === 'INSERT') {
-            console.log('DBG rt INSERT', newItem.id, newItem.title);
             setPeople((prev) => {
               if (prev.some((p) => p.id === newPerson.id)) {
                 return prev;
