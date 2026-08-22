@@ -160,6 +160,22 @@ export function useSession(sessionId: string | undefined) {
     });
   }, [markPending]);
 
+  // Insert an item at its order_index in a single atomic state update:
+  // existing items at/after that position shift down one step first, so the
+  // new item lands exactly where it belongs (used for insert-between-cards).
+  const optimisticInsert = useCallback((newItem: TempoItem) => {
+    markPending(newItem.id, 'add');
+    setTempoItems((prev) => {
+      if (prev.some((item) => item.id === newItem.id)) return prev;
+      const shifted = prev.map((item) =>
+        item.order_index >= newItem.order_index
+          ? { ...item, order_index: item.order_index + 1 }
+          : item
+      );
+      return normalizeOrder([...shifted, newItem]);
+    });
+  }, [markPending]);
+
   // Optimistic reorder - update multiple items
   const optimisticReorder = useCallback((reorderedItems: TempoItem[]) => {
     // Mark all as pending
@@ -326,7 +342,7 @@ export function useSession(sessionId: string | undefined) {
     revertUpdate,
     optimisticDelete,
     optimisticAdd,
-
+    optimisticInsert,
     optimisticReorder,
     confirmSync,
   };
