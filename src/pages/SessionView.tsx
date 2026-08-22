@@ -423,7 +423,7 @@ export default function SessionView() {
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <p className="text-lg text-muted-foreground">Inga tempon ännu</p>
             {canEdit && (
-              <Button className="mt-4" onClick={() => setIsAddingNew(true)}>
+              <Button className="mt-4" onClick={() => openAddModal(null)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Lägg till första tempot
               </Button>
@@ -487,6 +487,21 @@ export default function SessionView() {
                             className="absolute -bottom-1.5 left-0 right-0 h-1 rounded-full bg-primary z-10"
                           />
                         )}
+
+                        {/* Insert tempo between this card and the next (edit mode) */}
+                        {isEditMode && canEdit && !activeId && (
+                          <div className="group relative z-10 -my-1.5 flex h-5 items-center justify-center">
+                            <div className="absolute inset-x-6 h-px bg-border opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" />
+                            <button
+                              type="button"
+                              aria-label={`Lägg till tempo på plats ${item.order_index + 1}`}
+                              onClick={() => openAddModal(item.order_index + 1)}
+                              className="relative flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-muted-foreground/40 bg-background text-muted-foreground/60 opacity-60 transition-all hover:scale-110 hover:border-primary hover:text-primary hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary active:scale-95"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -524,7 +539,7 @@ export default function SessionView() {
         {/* Add button in edit mode */}
         {isEditMode && canEdit && tempoItems.length > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
-            <Button variant="outline" className="w-full" onClick={() => setIsAddingNew(true)}>
+            <Button variant="outline" className="w-full" onClick={() => openAddModal(null)}>
               <Plus className="mr-2 h-4 w-4" />
               Lägg till tempo
             </Button>
@@ -552,9 +567,12 @@ export default function SessionView() {
         <EditTempoModal
           item={null}
           people={people}
-          nextOrderIndex={tempoItems.length + 1}
+          nextOrderIndex={insertPosition ?? tempoItems.length + 1}
           onSave={handleAddNewItem}
-          onClose={() => setIsAddingNew(false)}
+          onClose={() => {
+            setIsAddingNew(false);
+            setInsertPosition(null);
+          }}
         />
       )}
     </div>
