@@ -61,7 +61,7 @@ export default function SessionView() {
     revertUpdate,
     optimisticDelete,
     optimisticAdd,
-
+    optimisticInsert,
     optimisticReorder,
     confirmSync,
   } = useSession(id);
@@ -192,7 +192,8 @@ export default function SessionView() {
     setInsertPosition(null);
 
     try {
-      // Inserting in the middle: shift the affected items down one position first
+      // Inserting in the middle: shift the affected items down one position in
+      // the database first (realtime broadcasts the shift to local state).
       if (targetIndex <= tempoItems.length) {
         const shifted = tempoItems
           .filter((item) => item.order_index >= targetIndex)
@@ -200,21 +201,11 @@ export default function SessionView() {
           // Descending order is the safest write order for +1 shifts
           .sort((a, b) => b.order_index - a.order_index);
 
-        // Optimistically shift local state (existing items only)
-        optimisticReorder(
-          tempoItems.map((item) =>
-            item.order_index >= targetIndex
-              ? { ...item, order_index: item.order_index + 1 }
-              : item
-          )
-        );
-
         const shiftSuccess = await updateTempoOrderWithToken(id, editToken, shifted);
         if (!shiftSuccess) {
           toast.error('Kunde inte skapa - ogiltig token');
           return;
         }
-        confirmSync(shifted.map((s) => s.id));
       }
 
       const realId = await createTempoItemWithToken(id, editToken, fields);
@@ -225,7 +216,9 @@ export default function SessionView() {
       }
 
       const now = new Date().toISOString();
-      optimisticAdd({
+      // Single atomic local update with the real database id: the new item is
+      // placed at targetIndex and everything after it shifts down one step.
+      optimisticInsert({
         ...fields,
         id: realId,
         session_id: id,
