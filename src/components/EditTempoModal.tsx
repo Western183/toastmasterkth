@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TempoItem, Person, PERSON_COLORS } from '@/types/session';
 import { normalizeLink, isValidWebLink, LINK_ERROR } from '@/lib/link-utils';
+import { SongbookPicker } from '@/components/SongbookPicker';
 
 interface EditTempoModalProps {
   item?: TempoItem | null;
@@ -71,6 +72,17 @@ export function EditTempoModal({ item, people, onSave, onClose, nextOrderIndex =
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Sångbok</Label>
+              <SongbookPicker
+                selectedTitle={title}
+                onSelect={(song) => {
+                  setTitle(song.title);
+                  setPage(String(song.page));
+                }}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="title">Titel *</Label>
               <Input
