@@ -61,7 +61,7 @@ export default function SessionView() {
     revertUpdate,
     optimisticDelete,
     optimisticAdd,
-
+    optimisticInsert,
     optimisticReorder,
     confirmSync,
   } = useSession(id);
@@ -69,6 +69,8 @@ export default function SessionView() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [showOnlyUndone, setShowOnlyUndone] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
+  // order_index where a new tempo should be inserted (null = append at bottom)
+  const [insertPosition, setInsertPosition] = useState<number | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [editToken, setEditToken] = useState<string | null>(() => {
@@ -152,14 +154,26 @@ export default function SessionView() {
     }
   }, [editToken, id, tempoItems, optimisticUpdate, revertUpdate, confirmSync]);
 
-  // Handle adding new item.
-  // We insert the item into local state exactly once, using the id returned by the
-  // database, so there is never a temporary placeholder card alongside the real one.
+  // Open the new-tempo modal. position = order_index to insert at (null = bottom).
+  const openAddModal = useCallback((position: number | null) => {
+    setInsertPosition(position);
+    setIsAddingNew(true);
+  }, []);
+
+  // Handle adding new item — supports both appending at the bottom and inserting
+  // at a specific position. The item is inserted into local state exactly once,
+  // using the id returned by the database (no temporary placeholder card).
   const handleAddNewItem = async (data: Partial<TempoItem>) => {
     if (!editToken || !id) {
       toast.error('Du har inte behörighet att redigera');
       return;
     }
+
+    // data.order_index carries the requested position (modal gets nextOrderIndex).
+    const targetIndex = Math.max(
+      1,
+      Math.min(data.order_index ?? tempoItems.length + 1, tempoItems.length + 1)
+    );
 
     const fields = {
       title: data.title!,
@@ -170,13 +184,30 @@ export default function SessionView() {
       person_id: data.person_id ?? null,
       link: data.link ?? null,
       video_link: data.video_link ?? null,
-      order_index: tempoItems.length + 1,
+      order_index: targetIndex,
       done: false,
     };
 
     setIsAddingNew(false);
+    setInsertPosition(null);
 
     try {
+      // Inserting in the middle: shift the affected items down one position in
+      // the database first (realtime broadcasts the shift to local state).
+      if (targetIndex <= tempoItems.length) {
+        const shifted = tempoItems
+          .filter((item) => item.order_index >= targetIndex)
+          .map((item) => ({ id: item.id, order_index: item.order_index + 1 }))
+          // Descending order is the safest write order for +1 shifts
+          .sort((a, b) => b.order_index - a.order_index);
+
+        const shiftSuccess = await updateTempoOrderWithToken(id, editToken, shifted);
+        if (!shiftSuccess) {
+          toast.error('Kunde inte skapa - ogiltig token');
+          return;
+        }
+      }
+
       const realId = await createTempoItemWithToken(id, editToken, fields);
 
       if (!realId) {
@@ -185,7 +216,9 @@ export default function SessionView() {
       }
 
       const now = new Date().toISOString();
-      optimisticAdd({
+      // Single atomic local update with the real database id: the new item is
+      // placed at targetIndex and everything after it shifts down one step.
+      optimisticInsert({
         ...fields,
         id: realId,
         session_id: id,
@@ -383,7 +416,7 @@ export default function SessionView() {
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <p className="text-lg text-muted-foreground">Inga tempon ännu</p>
             {canEdit && (
-              <Button className="mt-4" onClick={() => setIsAddingNew(true)}>
+              <Button className="mt-4" onClick={() => openAddModal(null)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Lägg till första tempot
               </Button>
@@ -447,6 +480,21 @@ export default function SessionView() {
                             className="absolute -bottom-1.5 left-0 right-0 h-1 rounded-full bg-primary z-10"
                           />
                         )}
+
+                        {/* Insert tempo between this card and the next (edit mode) */}
+                        {isEditMode && canEdit && !activeId && (
+                          <div className="group relative z-10 -my-1.5 flex h-5 items-center justify-center">
+                            <div className="absolute inset-x-6 h-px bg-border opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" />
+                            <button
+                              type="button"
+                              aria-label={`Lägg till tempo på plats ${item.order_index + 1}`}
+                              onClick={() => openAddModal(item.order_index + 1)}
+                              className="relative flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-muted-foreground/40 bg-background text-muted-foreground/60 opacity-60 transition-all hover:scale-110 hover:border-primary hover:text-primary hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary active:scale-95"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -484,7 +532,7 @@ export default function SessionView() {
         {/* Add button in edit mode */}
         {isEditMode && canEdit && tempoItems.length > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
-            <Button variant="outline" className="w-full" onClick={() => setIsAddingNew(true)}>
+            <Button variant="outline" className="w-full" onClick={() => openAddModal(null)}>
               <Plus className="mr-2 h-4 w-4" />
               Lägg till tempo
             </Button>
@@ -512,9 +560,12 @@ export default function SessionView() {
         <EditTempoModal
           item={null}
           people={people}
-          nextOrderIndex={tempoItems.length + 1}
+          nextOrderIndex={insertPosition ?? tempoItems.length + 1}
           onSave={handleAddNewItem}
-          onClose={() => setIsAddingNew(false)}
+          onClose={() => {
+            setIsAddingNew(false);
+            setInsertPosition(null);
+          }}
         />
       )}
     </div>

@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { normalizeLink, isValidWebLink, LINK_ERROR } from '@/lib/link-utils';
+import { SongbookPicker } from '@/components/SongbookPicker';
 
 interface InlineTempoCardProps {
   item: TempoItem;
@@ -226,6 +227,16 @@ export function InlineTempoCard({
         <div className="min-w-0 flex-1">
           {isEditMode ? (
             <div className="space-y-2">
+              {/* Songbook picker — fills title + page only */}
+              <SongbookPicker
+                compact
+                selectedTitle={localTitle}
+                onSelect={(song) => {
+                  handleTitleChange(song.title);
+                  handlePageChange(String(song.page));
+                }}
+              />
+
               {/* Title row */}
               <div className="flex items-center gap-2">
                 <Input
