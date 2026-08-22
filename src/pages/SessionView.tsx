@@ -69,6 +69,8 @@ export default function SessionView() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [showOnlyUndone, setShowOnlyUndone] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
+  // order_index where a new tempo should be inserted (null = append at bottom)
+  const [insertPosition, setInsertPosition] = useState<number | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [editToken, setEditToken] = useState<string | null>(() => {
@@ -152,14 +154,26 @@ export default function SessionView() {
     }
   }, [editToken, id, tempoItems, optimisticUpdate, revertUpdate, confirmSync]);
 
-  // Handle adding new item.
-  // We insert the item into local state exactly once, using the id returned by the
-  // database, so there is never a temporary placeholder card alongside the real one.
+  // Open the new-tempo modal. position = order_index to insert at (null = bottom).
+  const openAddModal = useCallback((position: number | null) => {
+    setInsertPosition(position);
+    setIsAddingNew(true);
+  }, []);
+
+  // Handle adding new item — supports both appending at the bottom and inserting
+  // at a specific position. The item is inserted into local state exactly once,
+  // using the id returned by the database (no temporary placeholder card).
   const handleAddNewItem = async (data: Partial<TempoItem>) => {
     if (!editToken || !id) {
       toast.error('Du har inte behörighet att redigera');
       return;
     }
+
+    // data.order_index carries the requested position (modal gets nextOrderIndex).
+    const targetIndex = Math.max(
+      1,
+      Math.min(data.order_index ?? tempoItems.length + 1, tempoItems.length + 1)
+    );
 
     const fields = {
       title: data.title!,
@@ -170,13 +184,39 @@ export default function SessionView() {
       person_id: data.person_id ?? null,
       link: data.link ?? null,
       video_link: data.video_link ?? null,
-      order_index: tempoItems.length + 1,
+      order_index: targetIndex,
       done: false,
     };
 
     setIsAddingNew(false);
+    setInsertPosition(null);
 
     try {
+      // Inserting in the middle: shift the affected items down one position first
+      if (targetIndex <= tempoItems.length) {
+        const shifted = tempoItems
+          .filter((item) => item.order_index >= targetIndex)
+          .map((item) => ({ id: item.id, order_index: item.order_index + 1 }))
+          // Descending order is the safest write order for +1 shifts
+          .sort((a, b) => b.order_index - a.order_index);
+
+        // Optimistically shift local state (existing items only)
+        optimisticReorder(
+          tempoItems.map((item) =>
+            item.order_index >= targetIndex
+              ? { ...item, order_index: item.order_index + 1 }
+              : item
+          )
+        );
+
+        const shiftSuccess = await updateTempoOrderWithToken(id, editToken, shifted);
+        if (!shiftSuccess) {
+          toast.error('Kunde inte skapa - ogiltig token');
+          return;
+        }
+        confirmSync(shifted.map((s) => s.id));
+      }
+
       const realId = await createTempoItemWithToken(id, editToken, fields);
 
       if (!realId) {
