@@ -42,7 +42,7 @@ import {
   deleteTempoItemWithToken,
   updateTempoOrderWithToken,
 } from '@/lib/secure-api';
-import { TempoItem } from '@/types/session';
+import { TempoItem, getPersonColor } from '@/types/session';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
