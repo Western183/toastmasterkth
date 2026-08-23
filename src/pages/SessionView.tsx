@@ -381,7 +381,7 @@ export default function SessionView() {
             </div>
           </div>
 
-          <ShareDialog sessionUrl={`${window.location.origin}/session/${session.id}`} sessionName={session.name} />
+          <ShareDialog />
 
           {(
             <Button

@@ -4,24 +4,20 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
-interface ShareDialogProps {
-  sessionUrl: string;
-  sessionName: string;
-}
+const SHARE_URL = 'https://toastmasterkth.lovable.app/';
 
-export function ShareDialog({ sessionUrl, sessionName }: ShareDialogProps) {
+export function ShareDialog() {
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(sessionUrl);
+      await navigator.clipboard.writeText(SHARE_URL);
       setCopied(true);
       toast.success('Länk kopierad');
       setTimeout(() => setCopied(false), 2000);
@@ -34,9 +30,8 @@ export function ShareDialog({ sessionUrl, sessionName }: ShareDialogProps) {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: sessionName,
-          text: sessionName,
-          url: sessionUrl,
+          title: 'Toastmaster',
+          url: SHARE_URL,
         });
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
@@ -59,36 +54,27 @@ export function ShareDialog({ sessionUrl, sessionName }: ShareDialogProps) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle asChild>
-            <h2>Dela sittningen</h2>
+            <h2>Dela Toastmaster</h2>
           </DialogTitle>
-          <DialogDescription>
-            Dela länken till sittningen
-          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Session link */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">Länk</p>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 overflow-hidden rounded-lg bg-muted px-4 py-3">
-                <p className="truncate text-sm font-mono">
-                  {sessionUrl}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={copyToClipboard}
-                aria-label="Kopiera länk"
-              >
-                {copied ? (
-                  <Check className="h-4 w-4 text-success" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 overflow-hidden rounded-lg bg-muted px-4 py-3">
+              <p className="truncate text-sm font-mono">{SHARE_URL}</p>
             </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={copyToClipboard}
+              aria-label="Kopiera länk"
+            >
+              {copied ? (
+                <Check className="h-4 w-4 text-success" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </Button>
           </div>
 
           <Button onClick={copyToClipboard} className="w-full" variant="secondary">
