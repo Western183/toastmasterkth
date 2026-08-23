@@ -105,6 +105,20 @@ export default function SessionView() {
     return tempoItems.filter((item) => item.done).length;
   }, [tempoItems]);
 
+  // Tempo count per person (all items, done or not) + unassigned count
+  const { personCounts, unassignedCount } = useMemo(() => {
+    const counts = new Map<string, number>();
+    let unassigned = 0;
+    for (const item of tempoItems) {
+      if (item.person_id) {
+        counts.set(item.person_id, (counts.get(item.person_id) ?? 0) + 1);
+      } else {
+        unassigned++;
+      }
+    }
+    return { personCounts: counts, unassignedCount: unassigned };
+  }, [tempoItems]);
+
   // Handle toggle done - optimistic update
   const handleToggleDone = useCallback(async (itemId: string, done: boolean) => {
     const original = tempoItems.find((item) => item.id === itemId);
