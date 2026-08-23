@@ -410,6 +410,36 @@ export default function SessionView() {
           )}
         </div>
 
+        {/* Person distribution summary */}
+        {(personCounts.size > 0 || unassignedCount > 0) && (
+          <div className="container overflow-x-auto border-t px-4 py-1.5">
+            <div className="flex w-max items-center gap-1.5">
+              {people
+                .filter((p) => (personCounts.get(p.id) ?? 0) > 0)
+                .map((p) => {
+                  const color = getPersonColor(p.color);
+                  return (
+                    <span
+                      key={p.id}
+                      className="flex items-center gap-1 whitespace-nowrap rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                    >
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: color.hsl }}
+                      />
+                      {p.name} {personCounts.get(p.id)}
+                    </span>
+                  );
+                })}
+              {unassignedCount > 0 && (
+                <span className="whitespace-nowrap rounded-full bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground/70">
+                  Ej tilldelade {unassignedCount}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Filters */}
         <div className="container flex items-center justify-between border-t px-4 py-2">
           <Button
