@@ -42,7 +42,7 @@ import {
   deleteTempoItemWithToken,
   updateTempoOrderWithToken,
 } from '@/lib/secure-api';
-import { TempoItem } from '@/types/session';
+import { TempoItem, getPersonColor } from '@/types/session';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -103,6 +103,20 @@ export default function SessionView() {
 
   const doneCount = useMemo(() => {
     return tempoItems.filter((item) => item.done).length;
+  }, [tempoItems]);
+
+  // Tempo count per person (all items, done or not) + unassigned count
+  const { personCounts, unassignedCount } = useMemo(() => {
+    const counts = new Map<string, number>();
+    let unassigned = 0;
+    for (const item of tempoItems) {
+      if (item.person_id) {
+        counts.set(item.person_id, (counts.get(item.person_id) ?? 0) + 1);
+      } else {
+        unassigned++;
+      }
+    }
+    return { personCounts: counts, unassignedCount: unassigned };
   }, [tempoItems]);
 
   // Handle toggle done - optimistic update
@@ -395,6 +409,36 @@ export default function SessionView() {
             </Button>
           )}
         </div>
+
+        {/* Person distribution summary */}
+        {(personCounts.size > 0 || unassignedCount > 0) && (
+          <div className="container overflow-x-auto border-t px-4 py-1.5">
+            <div className="flex w-max items-center gap-1.5">
+              {people
+                .filter((p) => (personCounts.get(p.id) ?? 0) > 0)
+                .map((p) => {
+                  const color = getPersonColor(p.color);
+                  return (
+                    <span
+                      key={p.id}
+                      className="flex items-center gap-1 whitespace-nowrap rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                    >
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: color.hsl }}
+                      />
+                      {p.name} {personCounts.get(p.id)}
+                    </span>
+                  );
+                })}
+              {unassignedCount > 0 && (
+                <span className="whitespace-nowrap rounded-full bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground/70">
+                  Ej tilldelade {unassignedCount}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="container flex items-center justify-between border-t px-4 py-2">
